@@ -7,7 +7,7 @@ import { tap } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class TutorService {
-  apiBaseUrl = 'https://dall-team-backend.onrender.com/api';
+  apiBaseUrl = 'http://localhost:5000/api';
 
   // Signals for application state
   student = signal<any>(null);
