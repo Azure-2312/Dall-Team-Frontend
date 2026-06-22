@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
   providedIn: 'root'
 })
 export class AuthService {
-  private apiBaseUrl = 'http://localhost:5000/api/auth';
+  private apiBaseUrl = 'https://dall-team-backend.onrender.com/api/auth';
   
   // Signal for session state
   currentUser = signal<any>(null);

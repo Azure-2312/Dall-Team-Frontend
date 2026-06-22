@@ -552,7 +552,7 @@ export class AdminDashboardComponent {
     if (!filePath) return '';
     const parts = filePath.split(/[/\\]/);
     const filename = parts[parts.length - 1];
-    return `http://localhost:5000/api/resources/tutoring-requests/download/${filename}`;
+    return `https://dall-team-backend.onrender.com/api/resources/tutoring-requests/download/${filename}`;
   }
 
   toggleUserStatus(user: any) {
