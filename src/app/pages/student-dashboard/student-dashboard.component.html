@@ -38,7 +38,6 @@
         </button>
         <button (click)="activeTab.set('copilot')" [class.active]="activeTab() === 'copilot'" class="nav-btn">📻 Copiloto (Viajes)</button>
         <button (click)="activeTab.set('routes')" [class.active]="activeTab() === 'routes'" class="nav-btn">📅 Ruta de Estudio</button>
-        <button (click)="activeTab.set('cells')" [class.active]="activeTab() === 'cells'" class="nav-btn">👥 Células de Estudio</button>
         <button (click)="activeTab.set('profile')" [class.active]="activeTab() === 'profile'" class="nav-btn">👤 Mi Perfil</button>
         
         <div style="border-top: 1px solid var(--border-default); margin: 6px 0; padding-top: 6px;">
@@ -509,97 +508,132 @@
                 
                 <!-- When NOT Retracted -->
                 <div *ngIf="!isRightPanelRetracted()" style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
-                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
-                    <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); display: flex; align-items: center; gap: 4px;">
-                      <span>🧠</span> Tutor IA
-                    </h3>
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); display: flex; align-items: center; gap: 4px;">
+                        <span>🧠</span> Tutor Inteligente
+                      </h3>
                       <span style="font-size: 0.6rem; background: rgba(0, 45, 98, 0.06); color: var(--unfv-blue-primary); font-weight: 800; padding: 2px 6px; border-radius: 4px;">
                         Semana {{ selectedWeek() }}
                       </span>
                     </div>
+                    <!-- Switcher Tabs -->
+                    <div style="display: flex; background: rgba(0, 0, 0, 0.04); padding: 2px; border-radius: 6px; gap: 2px;">
+                      <button type="button" (click)="rightPanelTab.set('chat')" 
+                              [style.background]="rightPanelTab() === 'chat' ? '#ffffff' : 'transparent'"
+                              [style.box-shadow]="rightPanelTab() === 'chat' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
+                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
+                        💬 Chat Tutor
+                      </button>
+                      <button type="button" (click)="rightPanelTab.set('summary')" 
+                              [style.background]="rightPanelTab() === 'summary' ? '#ffffff' : 'transparent'"
+                              [style.box-shadow]="rightPanelTab() === 'summary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
+                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
+                        📋 Resumen IA
+                      </button>
+                    </div>
                   </div>
                   
-                  <!-- Chat Logs list -->
-                  <div id="chatMessagesContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; min-height: 0;">
-                    <!-- Welcoming text -->
-                    <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
-                      ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre el tema de la <strong>Semana {{ selectedWeek() }}</strong> y te recomendaré libros físicos de tu facultad.
-                    </div>
-                    
-                    <!-- History loop -->
-                    <div *ngFor="let msg of chatHistory()" 
-                         [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
-                         [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
-                         [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
-                         [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
-                         [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
-                         style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.72rem; line-height: 1.4; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
-                      {{ msg.text }}
-                      
-                      <!-- Contextual interactive options inside chat bubble -->
-                      <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
-                        <button *ngFor="let opt of msg.options"
-                                (click)="respondToTutorTooltip(opt)"
-                                class="btn-primary"
-                                style="font-size: 0.65rem; padding: 5px 10px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
-                          {{ opt }}
-                        </button>
+                  <!-- TAB CONTENT: CHAT -->
+                  <ng-container *ngIf="rightPanelTab() === 'chat'">
+                    <!-- Chat Logs list -->
+                    <div id="chatMessagesContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; min-height: 0;">
+                      <!-- Welcoming text -->
+                      <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
+                        ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre el tema de la <strong>Semana {{ selectedWeek() }}</strong> y te recomendaré libros físicos de tu facultad.
                       </div>
                       
-                      <!-- Recommended books inside AI chat bubble -->
-                      <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-                        <div style="font-size: 0.6rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
-                          📖 Libros en tu Facultad:
+                      <!-- History loop -->
+                      <div *ngFor="let msg of chatHistory()" 
+                           [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
+                           [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
+                           [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
+                           [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
+                           [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
+                           style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.72rem; line-height: 1.4; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
+                        {{ msg.text }}
+                        
+                        <!-- Contextual interactive options inside chat bubble -->
+                        <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
+                          <button *ngFor="let opt of msg.options"
+                                  (click)="respondToTutorTooltip(opt)"
+                                  class="btn-primary"
+                                  style="font-size: 0.65rem; padding: 5px 10px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
+                            {{ opt }}
+                          </button>
                         </div>
                         
-                        <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                          <img *ngIf="bk.portada" 
-                               [src]="bk.portada" 
-                               style="width: 30px; height: 42px; object-fit: cover; border-radius: 3px; border: 1px solid #e2e8f0; flex-shrink: 0;" 
-                               alt="tapa">
-                          <div *ngIf="!bk.portada" 
-                               style="width: 30px; height: 42px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; color: #64748b;">
-                            📘
+                        <!-- Recommended books inside AI chat bubble -->
+                        <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                          <div style="font-size: 0.6rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
+                            📖 Libros en tu Facultad:
                           </div>
-                          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                              <div style="font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);" [title]="bk.titulo">
-                                {{ bk.titulo }}
-                              </div>
-                              <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.autor">
-                                {{ bk.autor }}
-                              </div>
+                          
+                          <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                            <img *ngIf="bk.portada" 
+                                 [src]="bk.portada" 
+                                 style="width: 30px; height: 42px; object-fit: cover; border-radius: 3px; border: 1px solid #e2e8f0; flex-shrink: 0;" 
+                                 alt="tapa">
+                            <div *ngIf="!bk.portada" 
+                                 style="width: 30px; height: 42px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; color: #64748b;">
+                              📘
                             </div>
-                            <div style="font-size: 0.6rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start;">
-                              Signatura: {{ bk.signatura }}
+                            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                              <div>
+                                <div style="font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);" [title]="bk.titulo">
+                                  {{ bk.titulo }}
+                                </div>
+                                <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.autor">
+                                  {{ bk.autor }}
+                                </div>
+                              </div>
+                              <div style="font-size: 0.6rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start;">
+                                Signatura: {{ bk.signatura }}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+                      
+                      <!-- Loading bubble -->
+                      <div *ngIf="chatLoading()" style="align-self: flex-start; background: #e2e8f0; color: var(--text-secondary); padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; display: flex; align-items: center; gap: 4px;">
+                        <span>🧠</span> Analizando tema...
+                      </div>
                     </div>
                     
-                    <!-- Loading bubble -->
-                    <div *ngIf="chatLoading()" style="align-self: flex-start; background: #e2e8f0; color: var(--text-secondary); padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; display: flex; align-items: center; gap: 4px;">
-                      <span>🧠</span> Analizando tema...
+                    <!-- Chat Input Box -->
+                    <div style="display: flex; gap: 4px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0; margin-top: auto;">
+                      <input type="text" 
+                             [(ngModel)]="chatMessage" 
+                             (keydown.enter)="sendChatMessage()"
+                             [disabled]="chatLoading()"
+                             placeholder="Preguntar al Tutor IA..." 
+                             style="flex: 1; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.74rem; outline: none; height: 34px;">
+                      <button (click)="sendChatMessage()" 
+                              [disabled]="chatLoading() || !chatMessage().trim()" 
+                              class="btn-primary" 
+                              style="padding: 0 12px; font-size: 0.72rem; border-radius: 6px; box-shadow: none; height: 34px;">
+                        Preguntar
+                      </button>
                     </div>
-                  </div>
-                  
-                  <!-- Chat Input Box -->
-                  <div style="display: flex; gap: 4px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0; margin-top: auto;">
-                    <input type="text" 
-                           [(ngModel)]="chatMessage" 
-                           (keydown.enter)="sendChatMessage()"
-                           [disabled]="chatLoading()"
-                           placeholder="Preguntar al Tutor IA..." 
-                           style="flex: 1; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.74rem; outline: none; height: 34px;">
-                    <button (click)="sendChatMessage()" 
-                            [disabled]="chatLoading() || !chatMessage().trim()" 
-                            class="btn-primary" 
-                            style="padding: 0 12px; font-size: 0.72rem; border-radius: 6px; box-shadow: none; height: 34px;">
-                      Preguntar
-                    </button>
-                  </div>
+                  </ng-container>
+
+                  <!-- TAB CONTENT: SUMMARY -->
+                  <ng-container *ngIf="rightPanelTab() === 'summary'">
+                    <div style="flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
+                      <div style="font-size: 0.72rem; line-height: 1.5; color: var(--text-primary); white-space: pre-line; background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); padding: 12px; border-radius: 8px;">
+                        <div style="font-weight: 800; color: var(--unfv-gold-primary); margin-bottom: 6px; font-size: 0.76rem; border-bottom: 1px solid rgba(212,175,55,0.15); padding-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                          <span>✨</span> Resumen Temático Semanal
+                        </div>
+                        <div *ngIf="currentWeekSummary()">
+                          {{ currentWeekSummary() }}
+                        </div>
+                        <div *ngIf="!currentWeekSummary()" style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-style: italic;">
+                          Aún no hay resumen generado para esta semana. Sube archivos (PDF/imagen) o escribe apuntes y dale clic a "Guardar Pizarra" para generarlo.
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
                 </div>
 
                 <!-- When Retracted -->
@@ -1383,6 +1417,14 @@
           </div>
         </div>
 
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 6px;">Rango de Repaso:</label>
+          <div style="display: flex; gap: 10px; background: rgba(0,0,0,0.03); padding: 6px; border-radius: 10px; border: 1px solid var(--border-glass);">
+            <button type="button" (click)="copilotRango.set('semana_actual')" [style.background]="copilotRango() === 'semana_actual' ? 'var(--unfv-blue-primary)' : 'transparent'" [style.color]="copilotRango() === 'semana_actual' ? '#ffffff' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.8rem;">📅 Solo Semana Actual</button>
+            <button type="button" (click)="copilotRango.set('todas')" [style.background]="copilotRango() === 'todas' ? 'var(--unfv-blue-primary)' : 'transparent'" [style.color]="copilotRango() === 'todas' ? '#ffffff' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.8rem;">📚 Todo lo Avanzado</button>
+          </div>
+        </div>
+
         <div *ngIf="copilotLoading()" style="text-align: center; padding: 10px; color: var(--unfv-blue-primary); font-size: 0.85rem; font-weight: 700;">
           ⏳ Gemini está estructurando tu guión personalizado...
         </div>
@@ -1580,110 +1622,6 @@
     </div>
   </section>
 
-  <!-- TAB: MATCHMAKING DE CÉLULAS DE ESTUDIO (MÓDULO 5) -->
-  <section *ngIf="activeTab() === 'cells'" style="display: flex; flex-direction: column; gap: 16px;">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
-      <div>
-        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;" class="gold-text-gradient">👥 Células de Repaso Social</h2>
-        <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0 0;">Emparejamiento inteligente de alumnos en riesgo de desánimo para estudio cooperativo.</p>
-      </div>
-      <button (click)="triggerCellMatchmaking()" class="btn-secondary" style="font-size: 0.72rem; padding: 6px 12px;">
-        🔍 Forzar Búsqueda de Célula (Demo)
-      </button>
-    </div>
-
-    <div *ngIf="cellsTriggerSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #10b981; font-size: 0.75rem;">
-      ✓ {{ cellsTriggerSuccess() }}
-    </div>
-
-    <!-- Matchmaking Invitations (Sección B) -->
-    <div *ngIf="cellsInvitations().length > 0" style="display: flex; flex-direction: column; gap: 10px;">
-      <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--unfv-gold-primary);">📬 Invitaciones Recibidas</h3>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
-        <div *ngFor="let inv of cellsInvitations()" class="glass-card" style="padding: 16px; border-color: var(--unfv-gold-primary); background: rgba(212,175,55,0.02); display: flex; flex-direction: column; gap: 10px;">
-          <div>
-            <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--unfv-gold-primary); font-weight: 800;">Mesa de Trabajo Sugerida:</span>
-            <h4 style="font-size: 0.9rem; font-weight: 800; margin: 4px 0 2px 0; color: var(--text-primary);">{{ inv.curso_nombre }}</h4>
-            <p style="font-size: 0.8rem; margin: 0; font-weight: 600; color: #fca5a5;">Debilidad Común: {{ inv.tema_comun }}</p>
-          </div>
-
-          <div style="font-size: 0.75rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px;">
-            <strong>Integrantes detectados:</strong> {{ inv.miembros_cantidad }} alumnos.
-            <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px;">
-              <span *ngFor="let ps of inv.miembros_pseudonimos" style="font-size: 0.58rem; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px;">
-                🕵️ {{ ps }}
-              </span>
-              <span style="font-size: 0.58rem; background: rgba(212,175,55,0.1); color: var(--unfv-gold-primary); padding: 1px 6px; border-radius: 4px;">
-                Tú: {{ inv.mi_pseudonimo }}
-              </span>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <button (click)="acceptCell(inv.id_registro)" class="btn-primary" style="font-size: 0.72rem; padding: 6px 12px; flex: 1;">Aceptar e Integrarme</button>
-            <button (click)="rejectCell(inv.id_registro)" class="btn-secondary" style="font-size: 0.72rem; padding: 6px 12px; color: #fca5a5; border-color: rgba(239,68,68,0.25);">Rechazar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Active Study Cells (Sección C) -->
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-      <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--text-primary);">👥 Mis Mesas de Estudio Activas</h3>
-      
-      <div *ngIf="cellsActive().length === 0" style="text-align: center; padding: 40px; border: 1px dashed var(--border-glass); border-radius: 8px;">
-        <p style="font-size: 0.8rem; color: var(--text-secondary);">No estás inscrito en ninguna célula de estudio activa actualmente.</p>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media (max-width: 992px) { grid-template-columns: 1fr; }">
-        <div *ngFor="let c of cellsActive()" class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-          <div>
-            <h4 style="font-size: 0.98rem; font-weight: 800; margin: 0;" class="gold-text-gradient">{{ c.curso_nombre }}</h4>
-            <span style="font-size: 0.75rem; color: var(--text-secondary);">Tema a Nivelar: {{ c.tema_comun }}</span>
-          </div>
-
-          <!-- Members reveal (Sección B.pseudonimos vs real names) -->
-          <div style="padding: 10px; background: rgba(255,255,255,0.01); border-radius: 8px; border: 1px solid var(--border-glass);">
-            <strong style="font-size: 0.7rem; display: block; margin-bottom: 6px; text-transform: uppercase; color: var(--text-secondary);">Miembros Revelados:</strong>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <div *ngFor="let m of c.miembros" style="font-size: 0.76rem; display: flex; justify-content: space-between; align-items: center;">
-                <span>{{ m.nombre }}</span>
-                <span [style.background]="m.aceptado ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'" [style.color]="m.aceptado ? '#34d399' : 'var(--text-secondary)'" style="font-size: 0.58rem; padding: 1px 6px; border-radius: 4px; font-weight: 700;">
-                  {{ m.aceptado ? 'Conectado' : 'Pendiente' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Coordinates / Meeting suggested spots (Sección C) -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="glass-card" style="padding: 10px; font-size: 0.72rem; background: rgba(0,45,98,0.02);">
-              <strong>📍 Reunión Física:</strong>
-              <p style="margin: 4px 0 0 0; color: var(--text-primary);">{{ c.ubicacion_reunion || 'Por Coordinar' }}</p>
-            </div>
-            <div class="glass-card" style="padding: 10px; font-size: 0.72rem; background: rgba(0,45,98,0.02);">
-              <strong>💻 Sala Virtual:</strong>
-              <p style="margin: 4px 0 0 0;">
-                <a [href]="c.enlace_virtual" target="_blank" style="color: var(--unfv-gold-primary); font-weight: 700; text-decoration: none;">Entrar a Videollamada →</a>
-              </p>
-            </div>
-          </div>
-
-          <!-- AI Suggested Study topics checklist (Sección C) -->
-          <div style="padding: 12px; background: rgba(212,175,55,0.03); border: 1px solid rgba(212,175,55,0.15); border-radius: 8px;">
-            <strong style="font-size: 0.72rem; color: var(--unfv-gold-primary); display: block; margin-bottom: 6px;">📋 Temario Sugerido por IA para el Grupo:</strong>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <div *ngFor="let p of c.temario_sugerido" style="font-size: 0.74rem; display: flex; align-items: center; gap: 6px; color: var(--text-primary);">
-                <span>✔️</span> <span>{{ p }}</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </section>
     </main>
   </div>
 

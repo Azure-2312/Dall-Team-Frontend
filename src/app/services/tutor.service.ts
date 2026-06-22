@@ -431,12 +431,13 @@ export class TutorService {
 
   // --- NEW FEATURES FOR 6 CORE MODULES ---
   // 1. Copiloto de Trayectos
-  generateCopilotScript(idAlumno: string, idCurso: string, tiempo: number, modalidad: string): Observable<any> {
+  generateCopilotScript(idAlumno: string, idCurso: string, tiempo: number, modalidad: string, rango: string = 'todas'): Observable<any> {
     return this.http.post<any>(`${this.apiBaseUrl}/copilot/generate-script`, {
       id_alumno: idAlumno,
       id_curso: idCurso,
       tiempo_trayecto: tiempo,
-      modalidad
+      modalidad,
+      rango
     });
   }
 

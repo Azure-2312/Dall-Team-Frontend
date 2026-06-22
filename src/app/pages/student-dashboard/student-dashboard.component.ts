@@ -265,8 +265,7 @@ export class StudentDashboardComponent {
         this.loadStudentTutoringRequests();
       } else if (tab === 'routes') {
         this.loadStudyRoute();
-      } else if (tab === 'cells') {
-        this.loadCellsDashboard();
+
       } else if (tab === 'evaluator') {
         this.loadCrowdQuestions();
       }
@@ -636,6 +635,7 @@ export class StudentDashboardComponent {
         next: (res) => {
           this.notesText.set(res.texto_notes || res.texto_notas || '');
           this.uploadedBgUrl.set(res.background_url || null);
+          this.currentWeekSummary.set(res.resumen_ia || '');
           const rawCanvasData = res.canvas_data || null;
           this.canvasDataSignal.set(rawCanvasData);
           
@@ -677,6 +677,7 @@ export class StudentDashboardComponent {
           this.notesText.set('');
           this.uploadedBgUrl.set(null);
           this.canvasDataSignal.set(null);
+          this.currentWeekSummary.set('');
           this.notesSaving.set(false);
           this.initCanvas();
         }
@@ -1410,9 +1411,10 @@ export class StudentDashboardComponent {
         canvasData,
         firstImgUrl
       ).subscribe({
-        next: () => {
+        next: (res) => {
           this.notesSaving.set(false);
           this.notesSaveSuccess.set('¡Apuntes guardados con éxito!');
+          this.currentWeekSummary.set(res.resumen_ia || '');
           setTimeout(() => this.notesSaveSuccess.set(''), 3000);
         },
         error: () => {
@@ -2086,6 +2088,11 @@ export class StudentDashboardComponent {
   copilotListening = signal<boolean>(false);
   copilotReport = signal<any>(null);
 
+  // Range and panel signals
+  copilotRango = signal<string>('todas');
+  rightPanelTab = signal<'chat' | 'summary'>('chat');
+  currentWeekSummary = signal<string>('');
+
   private recognitionInstance: any = null;
   private currentUtterance: any = null;
 
@@ -2111,7 +2118,8 @@ export class StudentDashboardComponent {
       student.id_alumno,
       this.copilotCurso(),
       this.copilotTiempo(),
-      this.copilotModalidad()
+      this.copilotModalidad(),
+      this.copilotRango()
     ).subscribe({
       next: (res) => {
         this.copilotLoading.set(false);
@@ -2562,54 +2570,4 @@ export class StudentDashboardComponent {
     });
   }
 
-  // 5. Células de Estudio
-  cellsInvitations = signal<any[]>([]);
-  cellsActive = signal<any[]>([]);
-  cellsSuccess = signal<string>('');
-  cellsError = signal<string>('');
-  cellsTriggerSuccess = signal<string>('');
-
-  loadCellsDashboard() {
-    const student = this.tutorService.student();
-    if (!student) return;
-
-    this.tutorService.getStudyCellInvitations(student.id_alumno).subscribe(res => {
-      this.cellsInvitations.set(res || []);
-    });
-
-    this.tutorService.getActiveStudyCells(student.id_alumno).subscribe(res => {
-      this.cellsActive.set(res || []);
-    });
-  }
-
-  acceptCell(idRegistro: number) {
-    this.cellsSuccess.set('');
-    this.cellsError.set('');
-    this.tutorService.acceptCellInvitation(idRegistro).subscribe({
-      next: () => {
-        this.cellsSuccess.set('¡Invitación aceptada! La célula ya está activa.');
-        this.loadCellsDashboard();
-      },
-      error: (err) => {
-        this.cellsError.set('Error al aceptar invitación.');
-      }
-    });
-  }
-
-  rejectCell(idRegistro: number) {
-    this.tutorService.rejectCellInvitation(idRegistro).subscribe({
-      next: () => {
-        this.loadCellsDashboard();
-      }
-    });
-  }
-
-  triggerCellMatchmaking() {
-    this.cellsTriggerSuccess.set('');
-    this.tutorService.triggerMatchmaking().subscribe(res => {
-      this.cellsTriggerSuccess.set(res.message);
-      setTimeout(() => this.cellsTriggerSuccess.set(''), 4000);
-      this.loadCellsDashboard();
-    });
-  }
 }
