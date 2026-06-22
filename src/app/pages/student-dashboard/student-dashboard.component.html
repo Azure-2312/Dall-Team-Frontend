@@ -984,7 +984,7 @@
                 <label style="display: block; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Curso de la Matrícula:</label>
                 <select [ngModel]="reqCourseId()" (ngModelChange)="reqCourseId.set($event)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.78rem; outline: none; cursor: pointer;">
                   <option value="">Selecciona una asignatura...</option>
-                  <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre_curso }}</option>
+                  <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre }}</option>
                 </select>
               </div>
 
@@ -1346,197 +1346,6 @@
         </div>
       </section>
 
-    </main>
-  </div>
-
-  <!-- FOOTER -->
-  <footer style="margin-top: auto; padding: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary); border-top: 1px solid var(--border-default);">
-    <p>© 2026 Universidad Nacional Federico Villarreal. Extensión RBAC & Panel Administrativo de Control.</p>
-  </footer>
-
-  <!-- GLOBAL FLOATING AI HELPER (visible in course workspace) -->
-  <div *ngIf="tutorService.activeCourse()" style="position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-family: var(--font-body);">
-    
-    <!-- Contextual Tooltip (TutorTooltip) -->
-    <div id="TutorTooltip" *ngIf="showTutorTooltip()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1.5px solid var(--unfv-gold-primary); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); position: relative; display: flex; flex-direction: column; gap: 4px;">
-      <button (click)="showTutorTooltip.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
-      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-gold-primary); text-transform: uppercase; letter-spacing: 0.3px;">✨ Mensaje del Tutor IA:</div>
-      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ tutorTooltipMessage() }}</div>
-      <!-- Clickable options -->
-      <div *ngIf="tutorTooltipOptions().length > 0" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; width: 100%;">
-        <button *ngFor="let opt of tutorTooltipOptions()"
-                (click)="respondToTutorTooltip(opt)"
-                class="btn-primary"
-                style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700; transition: background 0.2s;">
-          {{ opt }}
-        </button>
-      </div>
-    </div>
-    
-    <!-- speech bubble -->
-    <div *ngIf="showFloatingBubble() && !isFloatingChatOpen()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(0, 45, 98, 0.15); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; gap: 4px;">
-      <button (click)="showFloatingBubble.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
-      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-blue-primary); text-transform: uppercase; letter-spacing: 0.3px;">💡 Sugerencia del Tutor IA:</div>
-      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ floatingAiMessage() }}</div>
-    </div>
-
-    <!-- button -->
-    <button (click)="isFloatingChatOpen.set(!isFloatingChatOpen()); showFloatingBubble.set(false);" 
-            [style.background]="isFloatingChatOpen() ? '#ef4444' : 'var(--unfv-blue-primary)'"
-            style="width: 52px; height: 52px; border-radius: 50%; border: none; color: #ffffff; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 45, 98, 0.3); transition: all 0.2s;"
-            title="Tutor de Inteligencia Artificial">
-      {{ isFloatingChatOpen() ? '✕' : '🧠' }}
-    </button>
-
-    <!-- Floating Chat Window overlaying the page -->
-    <div *ngIf="isFloatingChatOpen()" 
-         style="width: 340px; height: 480px; border-radius: 16px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid var(--border-glass); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px;">
-      <!-- Header -->
-      <div style="padding: 12px 16px; background: var(--unfv-blue-primary); color: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-        <h4 style="margin: 0; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">🧠 Tutor IA UNFV (Canal Único)</h4>
-        <button (click)="isFloatingChatOpen.set(false)" style="background: transparent; border: none; color: #ffffff; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0;">✕</button>
-      </div>
-      
-      <!-- Chat body & input -->
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding: 12px; min-height: 0;">
-        
-        <!-- Chat Logs list -->
-        <div id="chatMessagesContainerFloating" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; min-height: 0;">
-          <!-- Welcoming text -->
-          <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.68rem; color: var(--text-secondary); line-height: 1.4;">
-            ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre la <strong>Semana {{ selectedWeek() }}</strong>.
-          </div>
-          
-          <!-- History loop -->
-          <div *ngFor="let msg of chatHistory()" 
-               [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
-               [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
-               [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
-               [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
-               [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
-               style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; line-height: 1.3; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
-            {{ msg.text }}
-            
-            <!-- Contextual interactive options inside floating chat bubble -->
-            <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
-              <button *ngFor="let opt of msg.options"
-                      (click)="respondToTutorTooltip(opt)"
-                      class="btn-primary"
-                      style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
-                {{ opt }}
-              </button>
-            </div>
-            
-            <!-- Recommended books inside AI chat bubble -->
-            <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-              <div style="font-size: 0.58rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
-                📖 Libros en tu Facultad:
-              </div>
-              
-              <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.titulo">
-                    {{ bk.titulo }}
-                  </div>
-                  <div style="font-size: 0.58rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    {{ bk.autor }}
-                  </div>
-                  <div style="font-size: 0.58rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start; display: inline-block; margin-top: 2px;">
-                    Signatura: {{ bk.signatura }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Typing loader -->
-          <div *ngIf="chatLoading()" style="align-self: flex-start; background: #f1f5f9; color: var(--text-secondary); padding: 8px 12px; border-radius: 10px; border-bottom-left-radius: 2px; font-size: 0.7rem; display: flex; align-items: center; gap: 6px;">
-            <span class="loading-dots">El Tutor IA está pensando</span>
-          </div>
-        </div>
-
-        <!-- Input Bar -->
-        <div style="display: flex; gap: 6px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0;">
-          <input type="text" 
-                 [(ngModel)]="chatMessage" 
-                 (keydown.enter)="sendChatMessage()"
-                 [disabled]="chatLoading()"
-                 placeholder="Escribe tu consulta académica..."
-                 style="flex: 1; font-family: var(--font-body); font-size: 0.72rem; padding: 8px 12px; border: 1px solid var(--border-glass); border-radius: 8px; outline: none; background: #f8fafc; color: var(--text-primary);">
-          <button (click)="sendChatMessage()" 
-                  [disabled]="chatLoading() || !chatMessage().trim()"
-                  class="btn-primary" 
-                  style="font-size: 0.7rem; padding: 0 12px; border-radius: 8px; box-shadow: none;">
-            Enviar
-          </button>
-        </div>
-        
-      </div>
-    </div>
-  </div>
-
-  <!-- STUDENT SYLLABUS UPLOAD MODAL -->
-  <div *ngIf="showSyllabusUploadForm() && tutorService.activeCourse() as active" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px; font-family: var(--font-body);">
-    <div style="width: 100%; max-width: 500px; display: flex; flex-direction: column; background: #ffffff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-glass);">
-      <!-- Modal Header -->
-      <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-        <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--unfv-blue-primary);">🎓 Subir Sílabo para {{ active.nombre }}</h3>
-        <button (click)="showSyllabusUploadForm.set(false)" style="background: rgba(0,0,0,0.06); border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; padding: 6px 10px; line-height: 1; border-radius: 8px;">×</button>
-      </div>
-      
-      <!-- Modal Body -->
-      <form (submit)="$event.preventDefault(); ingestStudentSyllabus()" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
-        <div style="display: flex; gap: 10px; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
-          <button type="button" (click)="studentSyllabusInputMode.set('pdf')" [style.background]="studentSyllabusInputMode() === 'pdf' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'pdf' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">📄 Subir PDF</button>
-          <button type="button" (click)="studentSyllabusInputMode.set('text')" [style.background]="studentSyllabusInputMode() === 'text' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'text' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">✍️ Pegar Texto</button>
-        </div>
-
-        <!-- PDF Mode -->
-        <div *ngIf="studentSyllabusInputMode() === 'pdf'">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Seleccionar archivo PDF del sílabo:</label>
-          <div style="border: 2px dashed var(--border-glass); padding: 20px; border-radius: 12px; text-align: center; background: rgba(0,0,0,0.015); position: relative;">
-            <input type="file" (change)="onStudentSyllabusPDFChange($event)" accept="application/pdf" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
-            <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">📂</span>
-            <span style="font-size: 0.76rem; color: var(--text-secondary); font-weight: 600; display: block;">
-              {{ studentSyllabusPDFFileName() || 'Arrastra o haz clic para subir tu PDF' }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Text Mode -->
-        <div *ngIf="studentSyllabusInputMode() === 'text'">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Pegar contenido de texto del sílabo:</label>
-          <textarea [ngModel]="studentSyllabusText()" (ngModelChange)="studentSyllabusText.set($event)" name="studentSyllabusText" rows="6" placeholder="Pega los contenidos semanales o el texto completo del sílabo aquí..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.82rem; font-family: var(--font-body); resize: vertical;" required></textarea>
-        </div>
-
-        <!-- Feedback Messages -->
-        <div *ngIf="studentSyllabusLoading()" style="text-align: center; padding: 10px; color: var(--unfv-blue-primary); font-size: 0.8rem; font-weight: 700;">
-          ⏳ La IA está leyendo y procesando tu sílabo (semana a semana)...
-        </div>
-        <div *ngIf="studentSyllabusSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
-          ✓ {{ studentSyllabusSuccess() }}
-        </div>
-        <div *ngIf="studentSyllabusError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
-          ✗ {{ studentSyllabusError() }}
-        </div>
-
-        <!-- Actions -->
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-          <button type="button" (click)="showSyllabusUploadForm.set(false)" [disabled]="studentSyllabusLoading()" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
-            Cancelar
-          </button>
-          <button type="submit" [disabled]="studentSyllabusLoading() || (studentSyllabusInputMode() === 'text' ? !studentSyllabusText() : !studentSyllabusPDFFile())" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
-            🤖 Procesar con IA
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- 6 CORE MODULES: NEW SECTION PANELS (COPILOT, ROUTES, CELLS) -->
-  <!-- ========================================================================= -->
-
   <!-- TAB: COPILOTO DE TRAYECTOS (MODO MANOS LIBRES) -->
   <section *ngIf="activeTab() === 'copilot'" style="display: flex; flex-direction: column; gap: 16px;">
     
@@ -1552,7 +1361,7 @@
           <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 6px;">Selecciona tu asignatura de repaso:</label>
           <select [ngModel]="copilotCurso()" (ngModelChange)="copilotCurso.set($event)" name="copilotCurso" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
             <option value="" disabled>-- Elige un curso activo --</option>
-            <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre_curso }}</option>
+            <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre }}</option>
           </select>
         </div>
 
@@ -1875,6 +1684,197 @@
       </div>
     </div>
   </section>
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="margin-top: auto; padding: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary); border-top: 1px solid var(--border-default);">
+    <p>© 2026 Universidad Nacional Federico Villarreal. Extensión RBAC & Panel Administrativo de Control.</p>
+  </footer>
+
+  <!-- GLOBAL FLOATING AI HELPER (visible in course workspace) -->
+  <div *ngIf="tutorService.activeCourse()" style="position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-family: var(--font-body);">
+    
+    <!-- Contextual Tooltip (TutorTooltip) -->
+    <div id="TutorTooltip" *ngIf="showTutorTooltip()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1.5px solid var(--unfv-gold-primary); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); position: relative; display: flex; flex-direction: column; gap: 4px;">
+      <button (click)="showTutorTooltip.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
+      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-gold-primary); text-transform: uppercase; letter-spacing: 0.3px;">✨ Mensaje del Tutor IA:</div>
+      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ tutorTooltipMessage() }}</div>
+      <!-- Clickable options -->
+      <div *ngIf="tutorTooltipOptions().length > 0" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; width: 100%;">
+        <button *ngFor="let opt of tutorTooltipOptions()"
+                (click)="respondToTutorTooltip(opt)"
+                class="btn-primary"
+                style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+          {{ opt }}
+        </button>
+      </div>
+    </div>
+    
+    <!-- speech bubble -->
+    <div *ngIf="showFloatingBubble() && !isFloatingChatOpen()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(0, 45, 98, 0.15); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; gap: 4px;">
+      <button (click)="showFloatingBubble.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
+      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-blue-primary); text-transform: uppercase; letter-spacing: 0.3px;">💡 Sugerencia del Tutor IA:</div>
+      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ floatingAiMessage() }}</div>
+    </div>
+
+    <!-- button -->
+    <button (click)="isFloatingChatOpen.set(!isFloatingChatOpen()); showFloatingBubble.set(false);" 
+            [style.background]="isFloatingChatOpen() ? '#ef4444' : 'var(--unfv-blue-primary)'"
+            style="width: 52px; height: 52px; border-radius: 50%; border: none; color: #ffffff; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 45, 98, 0.3); transition: all 0.2s;"
+            title="Tutor de Inteligencia Artificial">
+      {{ isFloatingChatOpen() ? '✕' : '🧠' }}
+    </button>
+
+    <!-- Floating Chat Window overlaying the page -->
+    <div *ngIf="isFloatingChatOpen()" 
+         style="width: 340px; height: 480px; border-radius: 16px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid var(--border-glass); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px;">
+      <!-- Header -->
+      <div style="padding: 12px 16px; background: var(--unfv-blue-primary); color: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+        <h4 style="margin: 0; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">🧠 Tutor IA UNFV (Canal Único)</h4>
+        <button (click)="isFloatingChatOpen.set(false)" style="background: transparent; border: none; color: #ffffff; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0;">✕</button>
+      </div>
+      
+      <!-- Chat body & input -->
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding: 12px; min-height: 0;">
+        
+        <!-- Chat Logs list -->
+        <div id="chatMessagesContainerFloating" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; min-height: 0;">
+          <!-- Welcoming text -->
+          <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.68rem; color: var(--text-secondary); line-height: 1.4;">
+            ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre la <strong>Semana {{ selectedWeek() }}</strong>.
+          </div>
+          
+          <!-- History loop -->
+          <div *ngFor="let msg of chatHistory()" 
+               [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
+               [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
+               [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
+               [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
+               [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
+               style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; line-height: 1.3; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
+            {{ msg.text }}
+            
+            <!-- Contextual interactive options inside floating chat bubble -->
+            <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
+              <button *ngFor="let opt of msg.options"
+                      (click)="respondToTutorTooltip(opt)"
+                      class="btn-primary"
+                      style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
+                {{ opt }}
+              </button>
+            </div>
+            
+            <!-- Recommended books inside AI chat bubble -->
+            <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 0.58rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
+                📖 Libros en tu Facultad:
+              </div>
+              
+              <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.titulo">
+                    {{ bk.titulo }}
+                  </div>
+                  <div style="font-size: 0.58rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ bk.autor }}
+                  </div>
+                  <div style="font-size: 0.58rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start; display: inline-block; margin-top: 2px;">
+                    Signatura: {{ bk.signatura }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Typing loader -->
+          <div *ngIf="chatLoading()" style="align-self: flex-start; background: #f1f5f9; color: var(--text-secondary); padding: 8px 12px; border-radius: 10px; border-bottom-left-radius: 2px; font-size: 0.7rem; display: flex; align-items: center; gap: 6px;">
+            <span class="loading-dots">El Tutor IA está pensando</span>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div style="display: flex; gap: 6px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0;">
+          <input type="text" 
+                 [(ngModel)]="chatMessage" 
+                 (keydown.enter)="sendChatMessage()"
+                 [disabled]="chatLoading()"
+                 placeholder="Escribe tu consulta académica..."
+                 style="flex: 1; font-family: var(--font-body); font-size: 0.72rem; padding: 8px 12px; border: 1px solid var(--border-glass); border-radius: 8px; outline: none; background: #f8fafc; color: var(--text-primary);">
+          <button (click)="sendChatMessage()" 
+                  [disabled]="chatLoading() || !chatMessage().trim()"
+                  class="btn-primary" 
+                  style="font-size: 0.7rem; padding: 0 12px; border-radius: 8px; box-shadow: none;">
+            Enviar
+          </button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT SYLLABUS UPLOAD MODAL -->
+  <div *ngIf="showSyllabusUploadForm() && tutorService.activeCourse() as active" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px; font-family: var(--font-body);">
+    <div style="width: 100%; max-width: 500px; display: flex; flex-direction: column; background: #ffffff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-glass);">
+      <!-- Modal Header -->
+      <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+        <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--unfv-blue-primary);">🎓 Subir Sílabo para {{ active.nombre }}</h3>
+        <button (click)="showSyllabusUploadForm.set(false)" style="background: rgba(0,0,0,0.06); border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; padding: 6px 10px; line-height: 1; border-radius: 8px;">×</button>
+      </div>
+      
+      <!-- Modal Body -->
+      <form (submit)="$event.preventDefault(); ingestStudentSyllabus()" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; gap: 10px; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
+          <button type="button" (click)="studentSyllabusInputMode.set('pdf')" [style.background]="studentSyllabusInputMode() === 'pdf' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'pdf' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">📄 Subir PDF</button>
+          <button type="button" (click)="studentSyllabusInputMode.set('text')" [style.background]="studentSyllabusInputMode() === 'text' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'text' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">✍️ Pegar Texto</button>
+        </div>
+
+        <!-- PDF Mode -->
+        <div *ngIf="studentSyllabusInputMode() === 'pdf'">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Seleccionar archivo PDF del sílabo:</label>
+          <div style="border: 2px dashed var(--border-glass); padding: 20px; border-radius: 12px; text-align: center; background: rgba(0,0,0,0.015); position: relative;">
+            <input type="file" (change)="onStudentSyllabusPDFChange($event)" accept="application/pdf" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+            <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">📂</span>
+            <span style="font-size: 0.76rem; color: var(--text-secondary); font-weight: 600; display: block;">
+              {{ studentSyllabusPDFFileName() || 'Arrastra o haz clic para subir tu PDF' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Text Mode -->
+        <div *ngIf="studentSyllabusInputMode() === 'text'">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Pegar contenido de texto del sílabo:</label>
+          <textarea [ngModel]="studentSyllabusText()" (ngModelChange)="studentSyllabusText.set($event)" name="studentSyllabusText" rows="6" placeholder="Pega los contenidos semanales o el texto completo del sílabo aquí..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.82rem; font-family: var(--font-body); resize: vertical;" required></textarea>
+        </div>
+
+        <!-- Feedback Messages -->
+        <div *ngIf="studentSyllabusLoading()" style="text-align: center; padding: 10px; color: var(--unfv-blue-primary); font-size: 0.8rem; font-weight: 700;">
+          ⏳ La IA está leyendo y procesando tu sílabo (semana a semana)...
+        </div>
+        <div *ngIf="studentSyllabusSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+          ✓ {{ studentSyllabusSuccess() }}
+        </div>
+        <div *ngIf="studentSyllabusError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ studentSyllabusError() }}
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+          <button type="button" (click)="showSyllabusUploadForm.set(false)" [disabled]="studentSyllabusLoading()" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="studentSyllabusLoading() || (studentSyllabusInputMode() === 'text' ? !studentSyllabusText() : !studentSyllabusPDFFile())" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
+            🤖 Procesar con IA
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 6 CORE MODULES: NEW SECTION PANELS (COPILOT, ROUTES, CELLS) -->
+  <!-- ========================================================================= -->
+
 
   <!-- ========================================================================= -->
   <!-- MANDATORY DECOMPRESSION BREAK LOCK OVERLAY SCREEN (MÓDULO 3) -->
