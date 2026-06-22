@@ -475,6 +475,19 @@ export class TutorService {
     return this.http.post<any>(`${this.apiBaseUrl}/study-routes/recalculate`, { id_examen: idExamen });
   }
 
+  // Notas / Calificaciones
+  getNotasCurso(idAlumno: string, idCurso: string): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}/notas/alumno/${idAlumno}/curso/${idCurso}`);
+  }
+
+  saveNotasCurso(idAlumno: string, idCurso: string, notas: any): Observable<any> {
+    return this.http.put<any>(`${this.apiBaseUrl}/notas/alumno/${idAlumno}/curso/${idCurso}`, notas);
+  }
+
+  getResumenNotas(idAlumno: string): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}/notas/alumno/${idAlumno}/resumen`);
+  }
+
   // 3. Evaluador submit & explain
   submitQuizAnswer(idAlumno: string, idCurso: string, esCorrecto: boolean, tiempoRespuesta: number, sesionDuracionMinutos: number, clicksRepetitivos: boolean): Observable<any> {
     return this.http.post<any>(`${this.apiBaseUrl}/evaluator/submit-answer`, {

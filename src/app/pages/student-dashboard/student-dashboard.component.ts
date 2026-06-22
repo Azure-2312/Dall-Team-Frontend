@@ -126,9 +126,6 @@ export class StudentDashboardComponent {
   selectedSlot = signal<any>(null);
   bookingSuccess = signal<string>('');
 
-  // Wellbeing states
-  wellbeingQuery = signal<string>('');
-  wellbeingFeedback = signal<any>(null);
 
   // Solicitudes de Tutoría states
   studentTutoringRequests = signal<any[]>([]);
@@ -254,20 +251,22 @@ export class StudentDashboardComponent {
           
           this.searchKoha('');
           this.loadStudentTutoringRequests();
+          this.loadResumenNotas();
         });
       }
     }, { allowSignalWrites: true });
 
-    // React to active tab change to tutoring, routes, cells, evaluator
+    // React to active tab change to tutoring, routes, cells, evaluator, notas
     effect(() => {
       const tab = this.activeTab();
       if (tab === 'tutoring') {
         this.loadStudentTutoringRequests();
       } else if (tab === 'routes') {
         this.loadStudyRoute();
-
       } else if (tab === 'evaluator') {
         this.loadCrowdQuestions();
+      } else if (tab === 'notas') {
+        this.loadResumenNotas();
       }
     }, { allowSignalWrites: true });
 
@@ -280,6 +279,7 @@ export class StudentDashboardComponent {
         this.loadBanner(course.id_curso);
         this.loadWeaknesses(course.id_curso);
         this.loadTutors(course.id_curso);
+        this.loadNotasCurso(course.id_curso);
       }
     }, { allowSignalWrites: true });
 
@@ -1748,15 +1748,6 @@ export class StudentDashboardComponent {
     });
   }
 
-  // --- MODULE 5: WELLBEING & OBU ---
-  checkStressSentiment() {
-    if (!this.wellbeingQuery()) return;
-    this.tutorService.checkStress(this.wellbeingQuery()).subscribe(res => {
-      this.wellbeingFeedback.set(res);
-      this.wellbeingQuery.set('');
-    });
-  }
-
   // --- SOLICITUDES DE TUTORÍA HANDLERS ---
   loadStudentTutoringRequests() {
     const student = this.tutorService.student();
@@ -2090,8 +2081,16 @@ export class StudentDashboardComponent {
 
   // Range and panel signals
   copilotRango = signal<string>('todas');
-  rightPanelTab = signal<'chat' | 'summary'>('chat');
+  rightPanelTab = signal<'chat' | 'summary' | 'notas_widget'>('chat');
   currentWeekSummary = signal<string>('');
+
+  // Notas signals
+  notasPC1 = signal<number | null>(null);
+  notasPC2 = signal<number | null>(null);
+  notasParcial = signal<number | null>(null);
+  notasFinal = signal<number | null>(null);
+  notasData = signal<any>(null);
+  resumenNotas = signal<any>(null);
 
   private recognitionInstance: any = null;
   private currentUtterance: any = null;
@@ -2570,4 +2569,65 @@ export class StudentDashboardComponent {
     });
   }
 
+  loadNotasCurso(courseId: string) {
+    const student = this.tutorService.student();
+    if (!student) return;
+    this.tutorService.getNotasCurso(student.id_alumno, courseId).subscribe({
+      next: (res) => {
+        this.notasData.set(res);
+        this.notasPC1.set(res.practica_calificada_1);
+        this.notasPC2.set(res.practica_calificada_2);
+        this.notasParcial.set(res.examen_parcial);
+        this.notasFinal.set(res.examen_final);
+      }
+    });
+  }
+
+  saveNotasCurso(courseId?: string) {
+    const student = this.tutorService.student();
+    const targetCourse = courseId || this.tutorService.activeCourse()?.id_curso;
+    if (!student || !targetCourse) return;
+    
+    const payload = {
+      practica_calificada_1: this.notasPC1(),
+      practica_calificada_2: this.notasPC2(),
+      examen_parcial: this.notasParcial(),
+      examen_final: this.notasFinal()
+    };
+    
+    this.tutorService.saveNotasCurso(student.id_alumno, targetCourse, payload).subscribe({
+      next: () => {
+        this.loadNotasCurso(targetCourse);
+        this.loadResumenNotas();
+      }
+    });
+  }
+
+  loadResumenNotas() {
+    const student = this.tutorService.student();
+    if (!student) return;
+    this.tutorService.getResumenNotas(student.id_alumno).subscribe({
+      next: (res) => {
+        this.resumenNotas.set(res);
+      }
+    });
+  }
+
+  getNotaColor(nota: number | null): string {
+    if (nota === null || nota === undefined) return 'var(--text-secondary)';
+    return nota >= 10.5 ? '#10b981' : '#ef4444';
+  }
+
+  notaNecesariaFinal(): string {
+    const pc1 = this.notasPC1() || 0;
+    const pc2 = this.notasPC2() || 0;
+    const ta = (pc1 + pc2) / 2;
+    const ep = this.notasParcial() || 0;
+    const required = (10.5 - (ta * 0.40) - (ep * 0.30)) / 0.30;
+    if (required <= 0) return '0.00 (Aprobado)';
+    if (required > 20) return 'Inalcanzable (>20)';
+    return required.toFixed(2);
+  }
+
 }
+

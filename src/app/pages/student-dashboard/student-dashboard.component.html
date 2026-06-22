@@ -32,9 +32,8 @@
         <button (click)="activeTab.set('evaluator')" [class.active]="activeTab() === 'evaluator'" class="nav-btn">🧠 Autoevaluación</button>
         <button (click)="activeTab.set('resources')" [class.active]="activeTab() === 'resources'" class="nav-btn">🏛️ Biblioteca Koha</button>
         <button (click)="activeTab.set('tutoring'); showTutorBubble('click_tutorias')" [class.active]="activeTab() === 'tutoring'" class="nav-btn">👨‍🏫 Tutorías</button>
-        <button (click)="activeTab.set('wellbeing')" [class.active]="activeTab() === 'wellbeing'" class="nav-btn" style="position: relative;">
-          🌱 Soporte OBU
-          <span *ngIf="tutorService.obuActive()" class="badge-alert-dot"></span>
+        <button (click)="activeTab.set('notas')" [class.active]="activeTab() === 'notas'" class="nav-btn">
+          📊 Mis Notas
         </button>
         <button (click)="activeTab.set('copilot')" [class.active]="activeTab() === 'copilot'" class="nav-btn">📻 Copiloto (Viajes)</button>
         <button (click)="activeTab.set('routes')" [class.active]="activeTab() === 'routes'" class="nav-btn">📅 Ruta de Estudio</button>
@@ -522,14 +521,20 @@
                       <button type="button" (click)="rightPanelTab.set('chat')" 
                               [style.background]="rightPanelTab() === 'chat' ? '#ffffff' : 'transparent'"
                               [style.box-shadow]="rightPanelTab() === 'chat' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
-                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
-                        💬 Chat Tutor
+                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
+                        💬 Chat
                       </button>
                       <button type="button" (click)="rightPanelTab.set('summary')" 
                               [style.background]="rightPanelTab() === 'summary' ? '#ffffff' : 'transparent'"
                               [style.box-shadow]="rightPanelTab() === 'summary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
-                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
+                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
                         📋 Resumen IA
+                      </button>
+                      <button type="button" (click)="rightPanelTab.set('notas_widget')" 
+                              [style.background]="rightPanelTab() === 'notas_widget' ? '#ffffff' : 'transparent'"
+                              [style.box-shadow]="rightPanelTab() === 'notas_widget' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
+                              style="flex: 1; border: none; padding: 4px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; cursor: pointer; color: var(--text-primary); outline: none;">
+                        📊 Notas
                       </button>
                     </div>
                   </div>
@@ -631,6 +636,58 @@
                         <div *ngIf="!currentWeekSummary()" style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-style: italic;">
                           Aún no hay resumen generado para esta semana. Sube archivos (PDF/imagen) o escribe apuntes y dale clic a "Guardar Pizarra" para generarlo.
                         </div>
+                      </div>
+                    </div>
+                  </ng-container>
+
+                  <!-- TAB CONTENT: NOTAS WIDGET -->
+                  <ng-container *ngIf="rightPanelTab() === 'notas_widget'">
+                    <div style="flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 12px; min-height: 0; font-family: var(--font-body);">
+                      <div class="glass-card" style="padding: 12px; background: rgba(0,45,98,0.01); border-color: var(--border-glass); border-radius: 8px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.76rem; font-weight: 800; color: var(--unfv-blue-primary); display: flex; align-items: center; gap: 4px;">
+                          <span>📊</span> Calificaciones del Curso
+                        </h4>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.72rem; margin-bottom: 12px;">
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Práctica Calificada 1:</span>
+                            <input type="number" [ngModel]="notasPC1()" (ngModelChange)="notasPC1.set($event)" min="0" max="20" step="0.5" style="width: 55px; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 2px 4px; border-radius: 4px; outline: none; font-size: 0.7rem; text-align: center;">
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Práctica Calificada 2:</span>
+                            <input type="number" [ngModel]="notasPC2()" (ngModelChange)="notasPC2.set($event)" min="0" max="20" step="0.5" style="width: 55px; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 2px 4px; border-radius: 4px; outline: none; font-size: 0.7rem; text-align: center;">
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Examen Parcial:</span>
+                            <input type="number" [ngModel]="notasParcial()" (ngModelChange)="notasParcial.set($event)" min="0" max="20" step="0.5" style="width: 55px; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 2px 4px; border-radius: 4px; outline: none; font-size: 0.7rem; text-align: center;">
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Examen Final:</span>
+                            <input type="number" [ngModel]="notasFinal()" (ngModelChange)="notasFinal.set($event)" min="0" max="20" step="0.5" style="width: 55px; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 2px 4px; border-radius: 4px; outline: none; font-size: 0.7rem; text-align: center;">
+                          </div>
+                        </div>
+
+                        <!-- Real-time calculations display -->
+                        <div *ngIf="notasData()" style="background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; font-size: 0.68rem; line-height: 1.4; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; border: 1px solid var(--border-glass);">
+                          <div style="display: flex; justify-content: space-between;">
+                            <span>Promedio TA (40%):</span>
+                            <span style="font-weight: 700;">{{ notasData().ta }}</span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between;">
+                            <span>Promedio Final:</span>
+                            <span [style.color]="getNotaColor(notasData().promedio_final)" style="font-weight: 800;">
+                              {{ notasData().promedio_final }}
+                            </span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border-glass); padding-top: 4px; margin-top: 2px;">
+                            <span>Nota req. Examen Final:</span>
+                            <span style="font-weight: 700; color: var(--unfv-gold-primary);">{{ notaNecesariaFinal() }}</span>
+                          </div>
+                        </div>
+
+                        <button (click)="saveNotasCurso()" class="btn-primary" style="font-size: 0.7rem; padding: 6px; width: 100%; border-radius: 6px; box-shadow: none; font-weight: 700; cursor: pointer;">
+                          💾 Guardar Calificaciones
+                        </button>
                       </div>
                     </div>
                   </ng-container>
@@ -1265,38 +1322,128 @@
 
       </section>
 
-      <!-- TAB 5: WELLBEING & OBU -->
-      <section *ngIf="activeTab() === 'wellbeing'" style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- TAB 5: MIS NOTAS -->
+      <section *ngIf="activeTab() === 'notas'" style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Global summary card -->
         <div class="glass-card" style="padding: 20px;">
-          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Acompañamiento Psicopedagógico (OBU)</h2>
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Área de soporte psicológico y burnout académico.</p>
+          <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 6px;" class="gold-text-gradient">📊 Mis Calificaciones y Rendimiento Académico</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px;">
+            Consulta tus promedios actuales calculados con los pesos de ponderación UNFV (la TA que promedia PC1 y PC2 equivale al 40%, el Examen Parcial al 30% y el Examen Final al 30%).
+          </p>
 
-          <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div *ngIf="resumenNotas()" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+            <div class="glass-card" style="padding: 14px; background: rgba(0,45,98,0.02); border-color: rgba(0,45,98,0.15); text-align: center; border-radius: 8px;">
+              <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Promedio General</span>
+              <span [style.color]="getNotaColor(resumenNotas().promedio_general)" style="font-size: 2rem; font-weight: 800; display: block; margin-top: 4px;">
+                {{ resumenNotas().promedio_general }}
+              </span>
+            </div>
             
-            <!-- Chat sentiment monitor -->
-            <div>
-              <h4 style="font-size: 0.85rem; color: var(--unfv-gold-primary); margin-bottom: 6px;">💬 Chat Empático de Desahogo</h4>
-              <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                <input type="text" [ngModel]="wellbeingQuery()" (ngModelChange)="wellbeingQuery.set($event)" placeholder="Escribe cómo te sientes hoy..." style="flex: 1; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
-                <button (click)="checkStressSentiment()" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px; box-shadow: none;">Enviar</button>
+            <div class="glass-card" style="padding: 14px; background: rgba(16,185,129,0.02); border-color: rgba(16,185,129,0.15); text-align: center; border-radius: 8px;">
+              <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Cursos Aprobados</span>
+              <span style="font-size: 2rem; font-weight: 800; color: #10b981; display: block; margin-top: 4px;">
+                {{ resumenNotas().cursos_aprobados }}
+              </span>
+            </div>
+
+            <div class="glass-card" style="padding: 14px; background: rgba(239,68,68,0.02); border-color: rgba(239,68,68,0.15); text-align: center; border-radius: 8px;">
+              <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Cursos Desaprobados</span>
+              <span style="font-size: 2rem; font-weight: 800; color: #ef4444; display: block; margin-top: 4px;">
+                {{ resumenNotas().cursos_desaprobados }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Risk alerts list -->
+          <div *ngIf="resumenNotas() && resumenNotas().alertas.length > 0" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+            <div *ngFor="let alert of resumenNotas().alertas" class="glass-card" style="padding: 10px 14px; background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.3); display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: #d97706; border-radius: 8px;">
+              <span>⚠️</span> <span>{{ alert }}</span>
+            </div>
+          </div>
+
+          <!-- Grades consolidation table -->
+          <div *ngIf="resumenNotas() && resumenNotas().detalles.length > 0" style="margin-bottom: 24px; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.78rem; font-family: var(--font-body);">
+              <thead>
+                <tr style="border-bottom: 1.5px solid var(--border-glass); background: rgba(0,0,0,0.02);">
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary);">Curso</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">PC1</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">PC2</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">TA (40%)</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">Parcial (30%)</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">Final (30%)</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">Promedio Final</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">Nota Mín. Final</th>
+                  <th style="padding: 10px; font-weight: 700; color: var(--text-primary); text-align: center;">Riesgo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of resumenNotas().detalles" style="border-bottom: 1px solid var(--border-glass); transition: background 0.15s ease;">
+                  <td style="padding: 10px; font-weight: 700; color: var(--text-primary);">{{ c.curso_nombre }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700;" [style.color]="getNotaColor(c.practica_calificada_1)">{{ c.practica_calificada_1 !== null ? c.practica_calificada_1 : '-' }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700;" [style.color]="getNotaColor(c.practica_calificada_2)">{{ c.practica_calificada_2 !== null ? c.practica_calificada_2 : '-' }}</td>
+                  <td style="padding: 10px; text-align: center; color: var(--text-secondary); font-weight: 600;">{{ c.ta !== 0 ? c.ta : '-' }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700;" [style.color]="getNotaColor(c.examen_parcial)">{{ c.examen_parcial !== null ? c.examen_parcial : '-' }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700;" [style.color]="getNotaColor(c.examen_final)">{{ c.examen_final !== null ? c.examen_final : '-' }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 800; font-size: 0.85rem;" [style.color]="getNotaColor(c.promedio_final)">{{ c.promedio_final }}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 600; color: var(--text-secondary);">{{ c.nota_minima_para_aprobar }}</td>
+                  <td style="padding: 10px; text-align: center;">
+                    <span [style.background]="c.riesgo === 'Riesgo Alto' ? 'rgba(239,68,68,0.1)' : c.riesgo === 'Riesgo Medio' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'" 
+                          [style.color]="c.riesgo === 'Riesgo Alto' ? '#ef4444' : c.riesgo === 'Riesgo Medio' ? '#d97706' : '#10b981'"
+                          style="font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">
+                      {{ c.riesgo }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Edit Grades Form -->
+          <div class="glass-card" style="padding: 16px; background: rgba(0,45,98,0.01); border-color: var(--border-glass); border-radius: 8px;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; color: var(--unfv-blue-primary);">✍ Ingreso y Simulación de Notas</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: flex-end; margin-bottom: 14px;">
+              <div>
+                <label style="font-size: 0.72rem; display: block; margin-bottom: 4px; font-weight: 700;">Seleccionar Curso:</label>
+                <select #editCourseSelect (change)="loadNotasCurso(editCourseSelect.value)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="" disabled selected>-- Selecciona un curso --</option>
+                  <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre }}</option>
+                </select>
               </div>
 
-              <div *ngIf="wellbeingFeedback() as fb" class="glass-card" [style.background]="fb.nivel_estres === 'alto' ? 'rgba(239,68,68,0.05)' : 'rgba(16,185,129,0.05)'" style="padding: 10px; font-size: 0.75rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <strong>Estrés: {{ fb.nivel_estres | uppercase }}</strong>
-                </div>
-                <p style="margin: 0; line-height: 1.4;">{{ fb.consejo_empatico }}</p>
+              <div>
+                <label style="font-size: 0.72rem; display: block; margin-bottom: 4px; font-weight: 700;">Práctica Calificada 1:</label>
+                <input type="number" [ngModel]="notasPC1()" (ngModelChange)="notasPC1.set($event)" min="0" max="20" step="0.5" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.8rem;" placeholder="0-20">
+              </div>
+
+              <div>
+                <label style="font-size: 0.72rem; display: block; margin-bottom: 4px; font-weight: 700;">Práctica Calificada 2:</label>
+                <input type="number" [ngModel]="notasPC2()" (ngModelChange)="notasPC2.set($event)" min="0" max="20" step="0.5" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.8rem;" placeholder="0-20">
+              </div>
+
+              <div>
+                <label style="font-size: 0.72rem; display: block; margin-bottom: 4px; font-weight: 700;">Examen Parcial:</label>
+                <input type="number" [ngModel]="notasParcial()" (ngModelChange)="notasParcial.set($event)" min="0" max="20" step="0.5" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.8rem;" placeholder="0-20">
+              </div>
+
+              <div>
+                <label style="font-size: 0.72rem; display: block; margin-bottom: 4px; font-weight: 700;">Examen Final:</label>
+                <input type="number" [ngModel]="notasFinal()" (ngModelChange)="notasFinal.set($event)" min="0" max="20" step="0.5" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.8rem;" placeholder="0-20">
               </div>
             </div>
 
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+              <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                <span *ngIf="editCourseSelect.value" style="font-weight: 700; color: var(--unfv-gold-primary);">
+                  🎯 Nota necesaria en examen final para aprobar: {{ notaNecesariaFinal() }}
+                </span>
+              </div>
+              <button (click)="saveNotasCurso(editCourseSelect.value)" [disabled]="!editCourseSelect.value" class="btn-primary" style="font-size: 0.75rem; padding: 8px 20px; border-radius: 6px; box-shadow: none;">
+                💾 Guardar Calificaciones
+              </button>
+            </div>
           </div>
 
-          <!-- OBU Details -->
-          <div *ngIf="tutorService.obuInfo() as obu" class="glass-card" style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.01); font-size: 0.75rem;">
-            <strong>{{ obu.oficina_central }}</strong> • {{ obu.servicio }}<br>
-            📞 Central: {{ obu.canales_atencion_mvp.telefono_central }} | ✉ Correo: {{ obu.canales_atencion_mvp.correo_soporte }}<br>
-            <em style="color: var(--unfv-gold-primary); display: block; margin-top: 6px;">"{{ obu.canales_atencion_mvp.mensaje_empatia_ia }}"</em>
-          </div>
         </div>
       </section>
 
