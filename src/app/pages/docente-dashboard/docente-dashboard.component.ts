@@ -66,14 +66,6 @@ export class DocenteDashboardComponent {
       }
     }, { allowSignalWrites: true });
 
-    // Load sentiment data when activeTab changes to docente-sentiment
-    effect(() => {
-      const tab = this.activeTab();
-      const user = this.authService.currentUser();
-      if (tab === 'docente-sentiment' && user) {
-        this.loadSentimentDashboard();
-      }
-    }, { allowSignalWrites: true });
   }
 
   onLogout() {
@@ -277,80 +269,6 @@ export class DocenteDashboardComponent {
       },
       error: (err) => {
         this.profileError.set(err.error?.error || 'Error al actualizar el perfil.');
-      }
-    });
-  }
-
-  // ==========================================
-  // CONSOLA DE ALERTAS DE SENTIMIENTO (MÓDULO 6)
-  // ==========================================
-  sentimentData = signal<any>(null);
-  sentimentLoading = signal<boolean>(false);
-  sentimentError = signal<string>('');
-
-  resourceCurso = signal<string>('');
-  resourceTema = signal<string>('');
-  resourceFile = signal<File | null>(null);
-  resourceFileName = signal<string>('');
-  resourceSuccess = signal<string>('');
-  resourceError = signal<string>('');
-  resourceLoading = signal<boolean>(false);
-
-  loadSentimentDashboard() {
-    const user = this.authService.currentUser();
-    if (!user) return;
-
-    this.sentimentLoading.set(true);
-    this.sentimentError.set('');
-    this.tutorService.getDocenteSentimentDashboard(user.profile_id).subscribe({
-      next: (res) => {
-        this.sentimentData.set(res);
-        this.sentimentLoading.set(false);
-      },
-      error: (err) => {
-        this.sentimentError.set('Error al cargar la consola de sentimiento.');
-        this.sentimentLoading.set(false);
-      }
-    });
-  }
-
-  onResourceFileChange(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.resourceFile.set(file);
-      this.resourceFileName.set(file.name);
-    }
-  }
-
-  submitResource() {
-    const user = this.authService.currentUser();
-    if (!user || !this.resourceCurso() || !this.resourceTema()) return;
-
-    this.resourceSuccess.set('');
-    this.resourceError.set('');
-    this.resourceLoading.set(true);
-
-    const formData = new FormData();
-    formData.append('id_docente', user.profile_id.toString());
-    formData.append('id_curso', this.resourceCurso());
-    formData.append('tema', this.resourceTema());
-    if (this.resourceFile()) {
-      formData.append('archivo_refuerzo', this.resourceFile()!);
-    }
-
-    this.tutorService.shareReinforcementResource(formData).subscribe({
-      next: (res) => {
-        this.resourceLoading.set(false);
-        this.resourceSuccess.set(`¡Material compartido y distribuido con éxito! Se inyectó prioritariamente a ${res.estudiantes_nivelados} alumnos con debilidad en este tema.`);
-        
-        // Reset form
-        this.resourceTema.set('');
-        this.resourceFile.set(null);
-        this.resourceFileName.set('');
-      },
-      error: (err) => {
-        this.resourceLoading.set(false);
-        this.resourceError.set(err.error?.error || 'Error al compartir el material.');
       }
     });
   }
