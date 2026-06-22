@@ -1,0 +1,328 @@
+<div class="app-container" style="display: flex; flex-direction: column; min-height: 100vh;" *ngIf="authService.currentUser() as user">
+  
+  <!-- HEADER BAR -->
+  <header class="glass-card" style="margin: 16px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; z-index: 10; background: #ffffff;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 48px; object-fit: contain;">
+      <div>
+        <h1 style="font-size: 1.3rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Tutor Inteligente Adaptativo</h1>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Portal de Retención Estudiantil - Universidad Nacional Federico Villarreal</p>
+      </div>
+    </div>
+
+    <!-- Logged User Info -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="foto" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--unfv-gold-primary);">
+      <div style="text-align: right;">
+        <h4 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">{{ user.nombre }}</h4>
+        <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: 700; text-transform: uppercase;">{{ user.rol }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN BODY GRID LAYOUT -->
+  <div style="display: flex; flex: 1; padding: 0 16px 16px 16px; gap: 16px; flex-direction: row; @media (max-width: 992px) { flex-direction: column; }">
+    
+    <!-- SIDEBAR -->
+    <aside style="width: 260px; display: flex; flex-direction: column; gap: 16px; flex-shrink: 0;">
+      <nav class="glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 4px;">
+        <p style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); padding: 6px 10px; letter-spacing: 0.05em; margin: 0;">Mi Portal</p>        <button (click)="activeTab.set('docente-tutoring')" [class.active]="activeTab() === 'docente-tutoring'" class="nav-btn">👨‍🏫 Tutorías</button>
+        <button (click)="activeTab.set('profile')" [class.active]="activeTab() === 'profile'" class="nav-btn">👤 Mi Perfil</button>
+        <div style="border-top: 1px solid var(--border-default); margin: 6px 0; padding-top: 6px;">
+          <button (click)="onLogout()" class="nav-btn" style="color: #f87171;">🚪 Cerrar Sesión</button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- DOCENTE PANEL WORKSPACE -->
+    <main style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+      <section *ngIf="activeTab() === 'docente-tutoring'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Mis Sesiones de Tutoría</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Consulta las tutorías asignadas por la Oficina de Tutoría y Psicopedagogía (OTPS) de tu facultad.
+          </p>
+
+          <!-- Global feedback messages -->
+          <div *ngIf="confirmSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem; margin-bottom: 10px;">✓ {{ confirmSuccess() }}</div>
+          <div *ngIf="confirmError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem; margin-bottom: 10px;">✗ {{ confirmError() }}</div>
+          <div *ngIf="completeSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem; margin-bottom: 10px;">✓ {{ completeSuccess() }}</div>
+          <div *ngIf="completeError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem; margin-bottom: 10px;">✗ {{ completeError() }}</div>
+
+          <div *ngIf="docenteSessions().length === 0" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.85rem;">
+            No tienes tutorías programadas en este momento.
+          </div>
+
+          <div *ngIf="docenteSessions().length > 0" style="display: flex; flex-direction: column; gap: 12px;">
+            <div *ngFor="let s of docenteSessions()" class="glass-card" style="padding: 16px; background: rgba(255,255,255,0.01); border-color: var(--border-glass);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                <div style="flex: 1;">
+                  <!-- Estado badge -->
+                  <span [style.background]="s.estado === 'Confirmado' ? 'rgba(16,185,129,0.1)' : s.estado === 'Completado' ? 'rgba(0,45,98,0.1)' : s.estado === 'Cancelado' ? 'rgba(239,68,68,0.1)' : s.estado === 'Cancelación Solicitada' ? 'rgba(234,88,12,0.1)' : 'rgba(212,175,55,0.1)'"
+                        [style.color]="s.estado === 'Confirmado' ? '#34d399' : s.estado === 'Completado' ? '#60a5fa' : s.estado === 'Cancelado' ? '#f87171' : s.estado === 'Cancelación Solicitada' ? '#f97316' : '#d4af37'"
+                        style="font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; display: inline-block; margin-bottom: 6px;">
+                    {{ s.estado === 'Aprobado' ? 'Pendiente Confirmación' : s.estado }}
+                  </span>
+                  
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">
+                    Curso: {{ s.nombre_curso }} ({{ s.id_curso }})
+                  </h4>
+                  <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">
+                    Alumnos inscritos: <strong>{{ s.alumnos_unidos.length + 1 }} alumnos</strong> (Solicitado por: {{ s.nombre_alumno }})
+                  </p>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 0.75rem;">
+                    <div>
+                      <span style="color: var(--text-secondary); display: block;">Horario:</span>
+                      <strong style="color: var(--text-primary);">{{ s.dia }} a las {{ s.hora }}</strong>
+                    </div>
+                    <div *ngIf="s.link_llamada">
+                      <span style="color: var(--text-secondary); display: block;">Enlace MS Teams:</span>
+                      <a [href]="s.link_llamada" target="_blank" style="color: var(--unfv-gold-primary); text-decoration: underline; font-weight: 700;">Iniciar Tutoría Virtual</a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action buttons column -->
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 170px;">
+
+                  <!-- ESTADO: Aprobado/Pendiente → Confirmar o Rechazar -->
+                  <ng-container *ngIf="s.estado === 'Aprobado' || s.estado === 'Pendiente'">
+                    <button (click)="confirmSession(s.id_solicitud)"
+                            class="btn-primary"
+                            style="font-size: 0.7rem; padding: 6px 12px; box-shadow: none; width: 100%;">
+                      ✅ Confirmar
+                    </button>
+                    <button (click)="openCancellationModal(s)"
+                            class="btn-secondary"
+                            style="border-color: #f87171; color: #f87171; background: rgba(239,68,68,0.05); font-size: 0.7rem; padding: 6px 12px; width: 100%;">
+                      ❌ Rechazar
+                    </button>
+                  </ng-container>
+
+                  <!-- ESTADO: Confirmado → Solicitar Cancelación (si aún no ha terminado) -->
+                  <ng-container *ngIf="s.estado === 'Confirmado' && !s.puede_completar && !s.motivo_cancelacion_docente">
+                    <button (click)="openCancellationModal(s)"
+                            class="btn-secondary"
+                            style="border-color: #f87171; color: #f87171; background: rgba(239,68,68,0.05); font-size: 0.7rem; padding: 6px 12px; width: 100%;">
+                      🚫 Solicitar Cancelación
+                    </button>
+                  </ng-container>
+
+                  <!-- ESTADO: Confirmado/Aprobado + puede_completar → Tutoría Completada + Reportar -->
+                  <ng-container *ngIf="(s.estado === 'Confirmado' || s.estado === 'Aprobado') && s.puede_completar">
+                    <button (click)="completeSession(s.id_solicitud)"
+                            class="btn-primary"
+                            style="font-size: 0.7rem; padding: 6px 12px; box-shadow: none; width: 100%; background: linear-gradient(135deg, #059669, #10b981);">
+                      ✔️ Tutoría Completada
+                    </button>
+                    <button (click)="openReportModal(s)"
+                            class="btn-secondary"
+                            style="border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.05); font-size: 0.7rem; padding: 6px 12px; width: 100%;">
+                      📋 Reportar Incidente
+                    </button>
+                  </ng-container>
+
+                  <!-- ESTADO: Completado → solo reportar -->
+                  <ng-container *ngIf="s.estado === 'Completado'">
+                    <span style="font-size: 0.65rem; color: #34d399; font-weight: 700; padding: 2px 8px; background: rgba(16,185,129,0.08); border-radius: 6px; text-align: center; width: 100%; box-sizing: border-box;">✔ Sesión Completada</span>
+                    <button (click)="openReportModal(s)"
+                            class="btn-secondary"
+                            style="border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.05); font-size: 0.7rem; padding: 6px 12px; width: 100%;">
+                      📋 Reportar Incidente
+                    </button>
+                  </ng-container>
+
+                  <!-- ESTADO: Cancelación Solicitada -->
+                  <ng-container *ngIf="s.estado === 'Cancelación Solicitada'">
+                    <span style="font-size: 0.7rem; color: var(--text-secondary); font-style: italic; text-align: right;">
+                      Pendiente de aprobación OTPS
+                    </span>
+                  </ng-container>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CANCELLATION REQUEST MODAL -->
+        <div *ngIf="selectedSessionForCancellation() as session" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 480px; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid var(--border-glass); overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">Solicitar Cancelación de Tutoría</h3>
+              <button (click)="selectedSessionForCancellation.set(null)" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+
+            <form (submit)="submitCancellationRequest($event)" style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: bold; text-transform: uppercase;">Sesión Seleccionada</span>
+                <h4 style="margin: 2px 0 0 0; font-size: 0.9rem; font-weight: 800;">{{ session.nombre_curso }} ({{ session.id_curso }})</h4>
+                <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: var(--text-secondary);">Horario: {{ session.dia }} a las {{ session.hora }}</p>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Motivo / Justificación:</label>
+                <textarea [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)" name="cReason" rows="3" placeholder="Ingresa la justificación de fuerza mayor por la que no podrás dictar la sesión..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; outline: none; font-family: var(--font-body);" required></textarea>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Subir Documento de Evidencia (.pdf, .doc, .docx, .png, .jpg):</label>
+                <div style="border: 2px dashed var(--border-glass); border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.02);"
+                     (click)="fileInput.click()">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">
+                    {{ cancelFileName() || 'Haz clic para seleccionar archivo de evidencia' }}
+                  </span>
+                </div>
+                <input type="file" #fileInput (change)="onCancelFileChange($event)" style="display: none;" required>
+              </div>
+
+              <div *ngIf="cancelSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem; text-align: center;">
+                ✓ {{ cancelSuccess() }}
+              </div>
+              
+              <div *ngIf="cancelError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem; text-align: center;">
+                ✗ {{ cancelError() }}
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" (click)="selectedSessionForCancellation.set(null)" class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="font-size: 0.75rem; padding: 6px 12px;" [disabled]="!cancelReason() || !cancelFile()">Enviar Solicitud</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- REPORT INCIDENT MODAL -->
+        <div *ngIf="showReportModal() as rSession" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 520px; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid var(--border-glass); overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">📋 Reportar Incidente de Tutoría</h3>
+              <button (click)="showReportModal.set(null)" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: bold; text-transform: uppercase;">Sesión:</span>
+                <h4 style="margin: 2px 0 0 0; font-size: 0.85rem; font-weight: 800;">{{ rSession.nombre_curso }} — {{ rSession.dia }} {{ rSession.hora }}</h4>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Tipo de Incidente:</label>
+                <select [ngModel]="reportTipo()" (ngModelChange)="reportTipo.set($event)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; outline: none;">
+                  <option value="">Selecciona el tipo de incidente...</option>
+                  <option value="El alumno no apareció a la sesión">El alumno no apareció a la sesión</option>
+                  <option value="El alumno no participó / no respondía para verificar comprensión">El alumno no participó / no respondía</option>
+                  <option value="El alumno fue maleducado o interrumpió la sesión">El alumno fue maleducado o interrumpió la sesión</option>
+                  <option value="Ingresó otra persona en lugar del alumno registrado">Ingresó otra persona en lugar del alumno</option>
+                  <option value="El alumno requiere tutoría adicional (seguimiento)">El alumno requiere tutoría adicional (seguimiento)</option>
+                  <option value="El alumno presentó dificultades técnicas durante la sesión virtual">Dificultades técnicas del alumno (virtual)</option>
+                  <option value="El alumno solicitó cambio de horario durante la sesión">El alumno solicitó cambio de horario</option>
+                  <option value="Otros">Otros (describir abajo)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Descripción adicional (opcional):</label>
+                <textarea [ngModel]="reportDescripcion()" (ngModelChange)="reportDescripcion.set($event)" rows="3" placeholder="Describe el incidente con más detalle..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; outline: none; font-family: var(--font-body);"></textarea>
+              </div>
+
+              <div *ngIf="reportSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem;">✓ {{ reportSuccess() }}</div>
+              <div *ngIf="reportError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem;">✗ {{ reportError() }}</div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+                <button (click)="showReportModal.set(null)" class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;">Cancelar</button>
+                <button (click)="submitReport()" [disabled]="!reportTipo()" class="btn-primary" style="font-size: 0.75rem; padding: 6px 12px; box-shadow: none;">Enviar Reporte</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TAB: PROFILE -->
+      <section *ngIf="activeTab() === 'profile'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 30px; max-width: 600px; margin: 0 auto; width: 100%;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px;" class="gold-text-gradient">Mi Perfil Institucional</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px;">Administra tu información y preferencias de acceso.</p>
+          
+          <div style="display: flex; gap: 24px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;">
+            <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; overflow: hidden; cursor: pointer; border: 3px solid var(--unfv-gold-primary); background: #f8fafc;"
+                 (click)="photoInput.click()" class="profile-photo-container">
+              <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
+              <div class="profile-photo-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease-in-out; color: #ffffff; font-size: 0.7rem; font-weight: bold; text-align: center; padding: 5px;">
+                Cambiar Foto
+              </div>
+            </div>
+            <input type="file" #photoInput (change)="onProfilePhotoChange($event)" accept="image/*" style="display: none;">
+            <div style="flex: 1; min-width: 200px;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: var(--text-primary);">{{ user.nombre }}</h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Rol: <span style="font-weight: 700; color: #ea580c;">{{ user.rol }}</span></p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Usuario: {{ user.username }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Correo: {{ user.email }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Facultad: {{ user.facultad }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Escuela Principal: {{ user.escuela }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Tipo de Docente: {{ user.tipo_docente }}</p>
+            </div>
+          </div>
+
+          <form (submit)="onUpdateProfile($event)" style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="border-top: 1px solid var(--border-default); padding-top: 16px;">
+              <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Modificar Contraseña</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileNewPassword() ? 'text' : 'password'" [ngModel]="profileNewPassword()" (ngModelChange)="profileNewPassword.set($event)" name="profNewPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileNewPassword.set(!showProfileNewPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Confirmar Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileConfirmPassword() ? 'text' : 'password'" [ngModel]="profileConfirmPassword()" (ngModelChange)="profileConfirmPassword.set($event)" name="profConfPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileConfirmPassword.set(!showProfileConfirmPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="profileSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+              ✓ {{ profileSuccess() }}
+            </div>
+            <div *ngIf="profileError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+              ✗ {{ profileError() }}
+            </div>
+
+            <div style="text-align: right; margin-top: 10px;">
+              <button type="submit" class="btn-primary" style="padding: 10px 20px; font-size: 0.8rem;">Guardar Cambios</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="margin-top: auto; padding: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary); border-top: 1px solid var(--border-default);">
+    <p>© 2026 Universidad Nacional Federico Villarreal. Portal de Tutoría y Psicopedagogía.</p>
+  </footer>
+
+</div>

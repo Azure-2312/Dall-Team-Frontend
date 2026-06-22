@@ -1,0 +1,1132 @@
+<div class="app-container" style="display: flex; flex-direction: column; min-height: 100vh;" *ngIf="authService.currentUser() as user">
+  
+  <!-- HEADER BAR -->
+  <header class="glass-card" style="margin: 16px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; z-index: 10; background: #ffffff;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 48px; object-fit: contain;">
+      <div>
+        <h1 style="font-size: 1.3rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Tutor Inteligente Adaptativo</h1>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Portal de Retención Estudiantil - Universidad Nacional Federico Villarreal</p>
+      </div>
+    </div>
+
+    <!-- Logged User Info -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="foto" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--unfv-gold-primary);">
+      <div style="text-align: right;">
+        <h4 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">{{ user.nombre }}</h4>
+        <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: 700; text-transform: uppercase;">{{ user.rol }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN BODY GRID LAYOUT -->
+  <div style="display: flex; flex: 1; padding: 0 16px 16px 16px; gap: 16px; flex-direction: row; @media (max-width: 992px) { flex-direction: column; }">
+    
+    <!-- SIDEBAR -->
+    <aside style="width: 260px; display: flex; flex-direction: column; gap: 16px; flex-shrink: 0;">
+      <nav class="glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 4px;">
+        <p style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); padding: 6px 10px; letter-spacing: 0.05em; margin: 0;">Mi Portal</p>
+        <button (click)="activeTab.set('admin-dashboard')" [class.active]="activeTab() === 'admin-dashboard'" class="nav-btn">📊 Auditoría & Métricas</button>
+        <button *ngIf="user.username === 'admin'" (click)="activeTab.set('mallas')" [class.active]="activeTab() === 'mallas'" class="nav-btn">🎓 Mallas Curriculares</button>
+        <button *ngIf="user.username === 'admin'" (click)="activeTab.set('admin-users'); adminFormMode.set('none');" [class.active]="activeTab() === 'admin-users'" class="nav-btn">🔑 Gestión de Accesos</button>
+        <button *ngIf="user.username !== 'admin'" (click)="activeTab.set('tutoring-requests')" [class.active]="activeTab() === 'tutoring-requests'" class="nav-btn">📅 Solicitudes de Tutoría</button>
+        <button (click)="activeTab.set('profile')" [class.active]="activeTab() === 'profile'" class="nav-btn">👤 Mi Perfil</button>
+        <div style="border-top: 1px solid var(--border-default); margin: 6px 0; padding-top: 6px;">
+          <button (click)="onLogout()" class="nav-btn" style="color: #f87171;">🚪 Cerrar Sesión</button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ADMIN WORKSPACE CONTENT -->
+    <main style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+      
+      <!-- ADMIN DASHBOARD (METRICS) -->
+      <section *ngIf="activeTab() === 'admin-dashboard'" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- BITÁCORA DE ACTIVIDADES (Solo para Admin Principal) -->
+        <div *ngIf="user.username === 'admin'" class="glass-card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+              <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Bitácora de Actividades (Auditoría General)</h2>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0 0;">Historial de todas las acciones ejecutadas por los administradores del sistema en tiempo real.</p>
+            </div>
+            <button (click)="loadAdminData()" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px;">🔄 Actualizar</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--border-default); color: var(--unfv-gold-primary); font-weight: 700;">
+                  <th style="padding: 10px 8px;">Fecha/Hora</th>
+                  <th style="padding: 10px 8px;">Usuario</th>
+                  <th style="padding: 10px 8px;">Rol</th>
+                  <th style="padding: 10px 8px;">Acción</th>
+                  <th style="padding: 10px 8px;">Detalles</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="adminActivityLogs().length === 0">
+                  <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-secondary);">No se registran actividades en la bitácora aún.</td>
+                </tr>
+                <tr *ngFor="let log of adminActivityLogs()" style="border-bottom: 1px solid var(--border-default); background: rgba(255,255,255,0.01);">
+                  <td style="padding: 10px 8px; white-space: nowrap; color: var(--text-secondary);">{{ log.fecha }}</td>
+                  <td style="padding: 10px 8px; font-weight: 700; color: var(--text-primary);">{{ log.username }}</td>
+                  <td style="padding: 10px 8px;">
+                    <span [style.background]="log.rol === 'Admin' ? 'rgba(0,45,98,0.1)' : 'rgba(234,88,12,0.1)'" 
+                          [style.color]="log.rol === 'Admin' ? 'var(--unfv-gold-primary)' : '#ea580c'"
+                          style="font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                      {{ log.rol }}
+                    </span>
+                  </td>
+                  <td style="padding: 10px 8px; font-weight: 600; color: #fff;">{{ log.accion }}</td>
+                  <td style="padding: 10px 8px; color: var(--text-secondary);">{{ log.detalles }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <ng-container *ngIf="user.username !== 'admin'">
+          <!-- Statistics overview -->
+          <div *ngIf="adminMetrics() as m" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div class="glass-card" style="padding: 16px; text-align: center; background: rgba(0, 45, 98, 0.05);">
+            <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Estudiantes en Malla</span>
+            <h3 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 4px;">{{ m.resumen.total_estudiantes }}</h3>
+          </div>
+          <div class="glass-card" style="padding: 16px; text-align: center; background: rgba(0, 45, 98, 0.05);">
+            <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Docentes Registrados</span>
+            <h3 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 4px;">{{ m.resumen.total_docentes }}</h3>
+          </div>
+          <div class="glass-card" style="padding: 16px; text-align: center; background: rgba(0, 45, 98, 0.05);">
+            <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Tutorías Solicitadas</span>
+            <h3 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 4px;">{{ m.resumen.total_citas_tutoria }}</h3>
+          </div>
+          <div class="glass-card" style="padding: 16px; text-align: center; background: rgba(0, 45, 98, 0.05);">
+            <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Logs de Ingesta RAG</span>
+            <h3 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 4px;">{{ m.resumen.auditoria_rag_logs }}</h3>
+          </div>
+        </div>
+
+        <!-- Detailed grids for burnout and courses -->
+        <div *ngIf="adminMetrics() as m" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+          
+          <!-- High failure courses -->
+          <div class="glass-card" style="padding: 20px;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: #f87171;">⚠️ Cursos con Mayor Reprobación (Tasa Crítica)</h3>
+            
+            <div *ngIf="m.cursos_criticos.length === 0" style="color: var(--text-secondary); font-size: 0.75rem; text-align: center; padding: 20px 0;">
+              No registras aprobaciones/jalados sembrados en el sistema aún.
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div *ngFor="let course of m.cursos_criticos" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.01); border: 1px solid var(--border-default); border-radius: 6px;">
+                <div>
+                  <h4 style="font-size: 0.8rem; font-weight: 600; margin: 0;">{{ course.nombre }} ({{ course.id_curso }})</h4>
+                  <span style="font-size: 0.65rem; color: var(--text-secondary);">Cantidad de Jalados: {{ course.reprobados }}</span>
+                </div>
+                <span class="badge-failed" style="font-size: 0.7rem; padding: 2px 6px;">{{ course.tasa_reprobacion }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sede burnout rates -->
+          <div class="glass-card" style="padding: 20px;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--unfv-gold-primary);">🌱 Burnout Estudiantil por Sede (Alertas OBU)</h3>
+            
+            <div *ngIf="m.estres_por_sede.length === 0" style="color: var(--text-secondary); font-size: 0.75rem; text-align: center; padding: 20px 0;">
+              Ningún estudiante registrado en sedes activas.
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div *ngFor="let sede of m.estres_por_sede" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.01); border: 1px solid var(--border-default); border-radius: 6px;">
+                <div>
+                  <h4 style="font-size: 0.8rem; font-weight: 600; margin: 0;">Sede: {{ sede.sede }}</h4>
+                  <span style="font-size: 0.65rem; color: var(--text-secondary);">Alertas a Bienestar: {{ sede.alertas_obu }}</span>
+                </div>
+                <span [class.badge-failed]="sede.riesgo === 'Alto'" [class.badge-approved]="sede.riesgo === 'Bajo'" [class.badge-taking]="sede.riesgo === 'Medio'" style="font-size: 0.65rem; padding: 2px 6px;">
+                  Riesgo: {{ sede.riesgo }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RAG process audit logs -->
+        <div class="glass-card" style="padding: 20px;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--unfv-gold-primary);">📜 Historial de Auditoría de Carga RAG</h3>
+          <div style="max-height: 200px; overflow-y: auto; font-size: 0.7rem; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+            <div *ngFor="let log of adminAuditLogs()" style="padding: 8px; background: rgba(255,255,255,0.01); border: 1px solid var(--border-default); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>Procesado:</strong> {{ log.tipo }} ({{ log.origen }})<br>
+                <span style="color: var(--text-secondary);">Registros Afectados: {{ log.registros }}</span>
+              </div>
+              <span style="color: var(--text-secondary);">{{ log.fecha }}</span>
+            </div>
+          </div>
+        </div>
+        </ng-container>
+
+      </section>
+
+      <!-- GESTIÓN MALLAS CURRICULARES -->
+      <section *ngIf="activeTab() === 'mallas' && user.username === 'admin'" style="display: flex; flex-direction: column; gap: 16px; position: relative;">
+        
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Consulta de Mallas Curriculares</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Selecciona la sede, facultad y escuela para visualizar la malla curricular cargada en el sistema.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Sede:</label>
+                <select [ngModel]="adminMallaSede()" (change)="onAdminMallaSedeChange($event)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="" disabled selected>Seleccionar Sede</option>
+                  <option *ngFor="let s of sedesList" [value]="s.codigo">Sede {{ s.codigo }} - {{ s.direccion }}</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Facultad:</label>
+                <select [ngModel]="adminMallaFacultad()" (change)="onAdminMallaFacultadChange($event)" [disabled]="!adminMallaSede()" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="" disabled selected>Seleccionar Facultad</option>
+                  <option *ngFor="let f of adminMallaFacultades()" [value]="f.nombre">{{ f.nombre }}</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Escuela Profesional:</label>
+                <select [ngModel]="adminMallaEscuela()" (change)="onAdminMallaEscuelaChange($event)" [disabled]="!adminMallaFacultad()" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="" disabled selected>Seleccionar Escuela</option>
+                  <option *ngFor="let e of adminMallaEscuelas()" [value]="e">{{ e }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Muestra de Malla Existente o Mensaje de Carga -->
+        <div *ngIf="adminMallaEscuela() && adminMallaQueried()" class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--unfv-gold-primary);">
+              Asignaturas de la Escuela: {{ adminMallaEscuela() }}
+            </h3>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">
+              Total: {{ adminMallaCourses().length }} cursos
+            </span>
+          </div>
+
+          <div *ngIf="adminMallaCourses().length === 0" style="text-align: center; padding: 40px 0; color: var(--text-secondary); font-size: 0.85rem;">
+            ⚠️ No se encontró una malla curricular cargada para esta escuela profesional.
+          </div>
+
+          <div *ngIf="adminMallaCourses().length > 0" style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- SECCIÓN: ASIGNATURAS REGULARES -->
+            <div>
+              <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span>📘 Asignaturas Regulares</span>
+                <span class="badge-approved" style="font-size: 0.65rem; padding: 1px 6px;">{{ adminRegularCourses().length }}</span>
+              </h4>
+              <div *ngIf="adminRegularCourses().length === 0" style="font-size: 0.75rem; color: var(--text-secondary); padding: 10px 0;">
+                No hay asignaturas regulares registradas.
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                <div *ngFor="let course of adminRegularCourses()" 
+                     (click)="selectedAdminCourse.set(course)"
+                     class="course-square-btn"
+                     style="aspect-ratio: 1 / 1; padding: 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px solid var(--border-glass); transition: all 0.2s;">
+                  <h5 style="font-size: 0.8rem; font-weight: 700; margin: 0; line-height: 1.3;">{{ course.nombre_curso }}</h5>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN: ASIGNATURAS ELECTIVAS -->
+            <div>
+              <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span>📙 Asignaturas Electivas</span>
+                <span class="badge-taking" style="font-size: 0.65rem; padding: 1px 6px; background: rgba(249, 115, 22, 0.1); color: #ea580c;">{{ adminElectiveCourses().length }}</span>
+              </h4>
+              <div *ngIf="adminElectiveCourses().length === 0" style="font-size: 0.75rem; color: var(--text-secondary); padding: 10px 0;">
+                No hay asignaturas electivas registradas.
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                <div *ngFor="let course of adminElectiveCourses()" 
+                     (click)="selectedAdminCourse.set(course)"
+                     class="course-square-btn"
+                     style="aspect-ratio: 1 / 1; padding: 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px solid var(--border-glass); transition: all 0.2s;">
+                  <h5 style="font-size: 0.8rem; font-weight: 700; margin: 0; line-height: 1.3;">{{ course.nombre_curso }}</h5>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- VISOR DE DETALLES DEL CURSO SELECCIONADO -->
+          <div *ngIf="selectedAdminCourse() as sel" class="glass-card" style="padding: 16px; background: rgba(234, 88, 12, 0.02); border-color: rgba(234, 88, 12, 0.15); margin-top: 10px; position: relative;">
+            <button (click)="selectedAdminCourse.set(null); isEditing.set(false);" style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; cursor: pointer; font-size: 1rem; color: var(--text-secondary);">✕</button>
+            <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--unfv-gold-primary);">Detalles de la Asignatura</span>
+            
+            <!-- VIEW MODE -->
+            <div *ngIf="!isEditing()">
+              <h4 style="font-size: 1.05rem; font-weight: 800; margin: 2px 0 10px 0; color: var(--text-primary);">{{ sel.nombre_curso }}</h4>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; font-size: 0.75rem; margin-bottom: 12px;">
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Código de Curso:</span>
+                  <strong style="color: var(--text-primary);">{{ sel.id_curso }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Ciclo Perteneciente:</span>
+                  <strong style="color: var(--text-primary);">{{ sel.ciclo_teorico }}° ciclo</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Créditos Académicos:</span>
+                  <strong style="color: var(--text-primary);">{{ sel.creditos }} créditos</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Tipo de Estudio:</span>
+                  <span class="badge-taking" style="font-size: 0.65rem; padding: 2px 6px;">{{ sel.tipo_estudio || 'General' }}</span>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Prerrequisito:</span>
+                  <strong style="color: var(--text-primary);">{{ sel.nombre_prerrequisito ? (sel.nombre_prerrequisito + ' (' + sel.id_prerrequisito + ')') : (sel.id_prerrequisito || 'Ninguno') }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Tipo de Curso:</span>
+                  <strong style="color: var(--text-primary);">{{ sel.tipo_curso || (sel.es_electivo ? 'Electivo' : 'Estándar') }}</strong>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button (click)="startEditingCourse(sel)" class="btn-primary" style="font-size: 0.7rem; padding: 6px 12px;">
+                  ✏️ Editar Información
+                </button>
+              </div>
+            </div>
+
+            <!-- EDIT MODE -->
+            <div *ngIf="isEditing()">
+              <form (submit)="onSaveCourseEdits(); $event.preventDefault();" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Nombre de Curso:</label>
+                    <input type="text" [ngModel]="editCourseNombre()" (ngModelChange)="editCourseNombre.set($event)" name="editNombre" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;" required>
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Código (No editable):</label>
+                    <input type="text" [value]="sel.id_curso" style="width: 100%; background: #f1f5f9; border: 1px solid var(--border-glass); color: #64748b; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;" disabled>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Ciclo:</label>
+                    <select [ngModel]="editCourseCiclo()" (ngModelChange)="editCourseCiclo.set($event)" name="editCiclo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;">
+                      <option *ngFor="let c of [1,2,3,4,5,6,7,8,9,10]" [value]="c">Ciclo {{ c }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Créditos:</label>
+                    <input type="number" [ngModel]="editCourseCreditos()" (ngModelChange)="editCourseCreditos.set($event)" name="editCreditos" min="1" max="10" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;" required>
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Prerrequisito:</label>
+                    <input type="text" [ngModel]="editCoursePrereq()" (ngModelChange)="editCoursePrereq.set($event)" name="editPrereq" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Tipo de Estudio:</label>
+                    <select [ngModel]="editCourseTipo()" (ngModelChange)="editCourseTipo.set($event)" name="editTipo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;">
+                      <option value="General">General</option>
+                      <option value="Especifico">Específico</option>
+                      <option value="Especializado">Especializado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Tipo de Curso:</label>
+                    <select [ngModel]="editCourseEsElectivo() ? 'Electivo' : 'Estándar'" (ngModelChange)="editCourseEsElectivo.set($event === 'Electivo')" name="editTipoCurso" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem;">
+                      <option value="Estándar">Estándar</option>
+                      <option value="Electivo">Electivo</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div *ngIf="editCourseSuccess()" style="padding: 6px; background: rgba(16,185,129,0.08); border-radius: 4px; color: #34d399; font-size: 0.7rem;">
+                  ✓ {{ editCourseSuccess() }}
+                </div>
+                <div *ngIf="editCourseError()" style="padding: 6px; background: rgba(239,68,68,0.08); border-radius: 4px; color: #f87171; font-size: 0.7rem;">
+                  ✗ {{ editCourseError() }}
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                  <button type="button" (click)="cancelEditingCourse()" class="btn-secondary" style="font-size: 0.7rem; padding: 5px 10px;">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn-primary" style="font-size: 0.7rem; padding: 5px 10px;">
+                    💾 Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Bottom Right Update button -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 10px; border-top: 1px solid var(--border-default); padding-top: 15px;">
+            <button (click)="adminMallaShowUpdateForm.set(!adminMallaShowUpdateForm())" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
+              {{ adminMallaShowUpdateForm() ? '✕ Cerrar Registro' : '➕ Agregar Asignatura' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- FORMULARIO DE REGISTRO MANUAL DE CURSO -->
+        <div *ngIf="adminMallaEscuela() && adminMallaShowUpdateForm()" class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Registrar Nueva Asignatura (Malla Manual)</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Ingresa manualmente los campos de la asignatura para incorporarla al plan de estudios de la escuela: <strong>{{ adminMallaEscuela() }}</strong>.
+          </p>
+
+          <form (submit)="onCreateCourse($event)" style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Código de Asignatura:</label>
+                <input type="text" [ngModel]="newCourseId()" (ngModelChange)="newCourseId.set($event)" name="cId" placeholder="Ej: INF03" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;" required>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Nombre de Asignatura:</label>
+                <input type="text" [ngModel]="newCourseNombre()" (ngModelChange)="newCourseNombre.set($event)" name="cNombre" placeholder="Ej: Programación Orientada a Objetos" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;" required>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Ciclo Teórico:</label>
+                <select [ngModel]="newCourseCiclo()" (ngModelChange)="newCourseCiclo.set($event)" name="cCiclo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option *ngFor="let c of [1,2,3,4,5,6,7,8,9,10]" [value]="c">Ciclo {{ c }}°</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Créditos:</label>
+                <input type="number" [ngModel]="newCourseCreditos()" (ngModelChange)="newCourseCreditos.set($event)" name="cCreditos" min="1" max="10" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;" required>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Prerrequisito (Código):</label>
+                <input type="text" [ngModel]="newCoursePrereq()" (ngModelChange)="newCoursePrereq.set($event)" name="cPrereq" placeholder="Ej: INF01 (Vacío si no tiene)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Tipo de Estudio:</label>
+                <select [ngModel]="newCourseTipo()" (ngModelChange)="newCourseTipo.set($event)" name="cTipo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="General">General</option>
+                  <option value="Especifico">Específico</option>
+                  <option value="Especializado">Especializado</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; margin-bottom: 4px; font-weight: 600;">Tipo de Curso:</label>
+                <select [ngModel]="newCourseEsElectivo() ? 'Electivo' : 'Estándar'" (ngModelChange)="newCourseEsElectivo.set($event === 'Electivo')" name="cTipoCurso" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                  <option value="Estándar">Estándar</option>
+                  <option value="Electivo">Electivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div *ngIf="newCourseSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem;">
+              ✓ {{ newCourseSuccess() }}
+            </div>
+            <div *ngIf="newCourseError()" style="padding: 10px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem;">
+              ✗ {{ newCourseError() }}
+            </div>
+
+            <div style="text-align: right; display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+              <button type="button" (click)="adminMallaShowUpdateForm.set(false)" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
+                💾 Guardar Asignatura
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </section>
+
+      <!-- TAB: ADMIN USERS (GESTIÓN DE ACCESOS) -->
+      <section *ngIf="activeTab() === 'admin-users' && user.username === 'admin'" style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- USER LIST -->
+        <div class="glass-card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+              <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Gestión de Accesos Institucionales</h2>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0 0;">Administra, habilita o elimina cuentas del sistema.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button (click)="adminFormMode.set('admin'); newAdminSuccess.set(''); newAdminError.set('');" class="btn-secondary" style="font-size: 0.75rem; padding: 7px 12px;">+ Admin</button>
+              <button (click)="adminFormMode.set('docente'); newDocenteSuccess.set(''); newDocenteError.set('');" class="btn-primary" style="font-size: 0.75rem; padding: 7px 12px; box-shadow: none;">+ Docente</button>
+            </div>
+          </div>
+
+          <!-- Filters section -->
+          <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 200px; flex: 1;">
+              <label style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Filtrar por Cargo/Tipo:</label>
+              <select [ngModel]="filterCargo()" (ngModelChange)="filterCargo.set($event)" style="background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
+                <option value="all">Todos los Cargos</option>
+                <option value="biblioteca">Administradores de Biblioteca</option>
+                <option value="otps">Administradores OTPS (Tutoría y Psicopedagogía)</option>
+                <option value="docente">Profesores / Docentes</option>
+                <option value="estudiante">Estudiantes / Alumnos</option>
+              </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 200px; flex: 1;">
+              <label style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Filtrar por Facultad:</label>
+              <select [ngModel]="filterFacultad()" (ngModelChange)="filterFacultad.set($event)" style="background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%;">
+                <option value="all">Todas las Facultades</option>
+                <option value="Administracion">Administración</option>
+                <option value="Arquitectura">Arquitectura y Urbanismo</option>
+                <option value="Derecho">Derecho y Ciencia Política</option>
+                <option value="Economicas">Ciencias Económicas</option>
+                <option value="Financieras">Ciencias Financieras y Contables</option>
+                <option value="Educacion">Educación</option>
+                <option value="Humanidades">Humanidades</option>
+                <option value="Sociales">Ciencias Sociales</option>
+                <option value="Oceanografia">Oceanografía y Pesquería</option>
+                <option value="Civil">Ingeniería Civil</option>
+                <option value="FIIS">Ingeniería Industrial y de Sistemas (FIIS)</option>
+                <option value="Psicologia">Psicología</option>
+                <option value="Geografica">Ingeniería Geográfica, Ambiental y Ecoturismo</option>
+                <option value="Electronica">Ingeniería Electrónica e Informática</option>
+                <option value="Odontologia">Odontología</option>
+                <option value="Matematicas">Ciencias Naturales y Matemáticas</option>
+                <option value="Medicina">Medicina "Hipólito Unanue"</option>
+                <option value="Tecnologia Medica">Tecnología Médica</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div *ngIf="filteredUsers().length === 0" style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 0.85rem;">
+              No se encontraron usuarios con los filtros seleccionados.
+            </div>
+            <div *ngFor="let u of filteredUsers()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid var(--border-glass); border-radius: 10px; background: rgba(255,255,255,0.02);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(0,45,98,0.1); display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                  {{ u.rol === 'Admin' ? '👨‍💼' : u.rol === 'Docente' ? '👨‍🏫' : '🎓' }}
+                </div>
+                <div>
+                  <h5 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">{{ u.username }}</h5>
+                  <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ u.email }} · {{ u.rol }}</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span [style.background]="u.activo ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'" 
+                      [style.color]="u.activo ? '#34d399' : '#f87171'"
+                      style="font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">
+                  {{ u.activo ? 'Activo' : 'Inhabilitado' }}
+                </span>
+                <button (click)="toggleUserStatus(u)" 
+                        [class.btn-secondary]="u.activo" 
+                        [class.btn-primary]="!u.activo"
+                        style="font-size: 0.65rem; padding: 4px 10px; box-shadow: none;">
+                  {{ u.activo ? '🚫 Inhabilitar' : '✅ Habilitar' }}
+                </button>
+                <!-- Sanction indicator/button for students -->
+                <ng-container *ngIf="u.rol === 'Estudiante'">
+                  <span [style.background]="u.sancionado ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.1)'"
+                        [style.color]="u.sancionado ? '#f87171' : '#34d399'"
+                        style="font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-right: 4px;">
+                    {{ u.sancionado ? 'Sancionado' : 'Sin Sanción' }}
+                  </span>
+                  <button (click)="onToggleStudentSanction(u)"
+                          [style.background]="u.sancionado ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'"
+                          [style.color]="u.sancionado ? '#34d399' : '#f87171'"
+                          style="font-size: 0.65rem; padding: 4px 10px; border: 1px solid var(--border-glass); border-radius: 6px; cursor: pointer; margin-right: 4px;">
+                    {{ u.sancionado ? '😇 Activar' : '⚖️ Sancionar' }}
+                  </button>
+                </ng-container>
+                <button (click)="openEditUserModal(u)" 
+                        class="btn-secondary"
+                        style="font-size: 0.65rem; padding: 4px 10px; box-shadow: none; border: 1px solid var(--border-glass);">
+                  ✏️ Editar
+                </button>
+                <button (click)="deleteUser(u)" 
+                        style="font-size: 0.65rem; padding: 4px 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #f87171; border-radius: 6px; cursor: pointer;">
+                  🗑️ Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CREATE FORM (shown when adminFormMode is set) -->
+        <div *ngIf="adminFormMode() !== 'none'" class="glass-card" style="padding: 30px; max-width: 600px; margin: 0 auto; width: 100%;">
+          <!-- MENU back button -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0;" class="gold-text-gradient">
+              {{ adminFormMode() === 'admin' ? 'Registrar Administrador' : 'Registrar Docente' }}
+            </h2>
+            <button (click)="adminFormMode.set('none')" class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">← Cancelar</button>
+          </div>
+
+        <div *ngIf="adminFormMode() === 'none'" style="display: none;"><!-- placeholder --></div>
+
+          <!-- FORMULARIO CREAR ADMINISTRADOR -->
+          <div *ngIf="adminFormMode() === 'admin'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Registrar Cuenta Administrador</h2>
+              <button (click)="adminFormMode.set('none')" class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">← Volver</button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px;">
+              Ingresa los datos para registrar un nuevo administrador. El correo debe coincidir con la nomenclatura institucional.
+            </p>
+
+            <form (submit)="onCreateAdmin($event)" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nombres:</label>
+                  <input type="text" [ngModel]="newAdminNombres()" (ngModelChange)="newAdminNombres.set($event)" name="newAdminNombres" placeholder="Ej: Fabiola Bell" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Apellidos:</label>
+                  <input type="text" [ngModel]="newAdminApellidos()" (ngModelChange)="newAdminApellidos.set($event)" name="newAdminApellidos" placeholder="Ej: Minchan Cogorno" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Correo Institucional:</label>
+                <input type="email" [ngModel]="newAdminEmail()" (ngModelChange)="newAdminEmail.set($event)" name="newAdminEmail" placeholder="fminchan&#64;unfv.edu.pe" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-top: 4px;">Debe seguir la nomenclatura institucional (ej: fminchan&#64;unfv.edu.pe)</span>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Contraseña Temporal:</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input [type]="showNewAdminPassword() ? 'text' : 'password'" [ngModel]="newAdminPassword()" (ngModelChange)="newAdminPassword.set($event)" name="newAdminPassword" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 42px 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                  <button type="button" (click)="showNewAdminPassword.set(!showNewAdminPassword())" style="position: absolute; right: 12px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg *ngIf="!showNewAdminPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    <svg *ngIf="showNewAdminPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="newAdminSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+                ✓ {{ newAdminSuccess() }}
+              </div>
+              <div *ngIf="newAdminError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+                ✗ {{ newAdminError() }}
+              </div>
+
+              <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px; padding: 14px;">
+                Crear Administrador
+              </button>
+            </form>
+          </div>
+
+          <!-- FORMULARIO CREAR DOCENTE -->
+          <div *ngIf="adminFormMode() === 'docente'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Registrar Cuenta Docente</h2>
+              <button (click)="adminFormMode.set('none')" class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">← Volver</button>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px;">
+              Ingresa los datos para registrar un nuevo docente institucional. El correo debe coincidir con la nomenclatura reglamentaria.
+            </p>
+
+            <form (submit)="onCreateDocente($event)" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nombres:</label>
+                  <input type="text" [ngModel]="newDocenteNombres()" (ngModelChange)="newDocenteNombres.set($event)" name="newDocenteNombres" placeholder="Ej: Julio Elmer" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Apellidos:</label>
+                  <input type="text" [ngModel]="newDocenteApellidos()" (ngModelChange)="newDocenteApellidos.set($event)" name="newDocenteApellidos" placeholder="Ej: Sotomayor Abarca" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Correo Institucional:</label>
+                <input type="email" [ngModel]="newDocenteEmail()" (ngModelChange)="newDocenteEmail.set($event)" name="newDocenteEmail" placeholder="jsotomayor&#64;unfv.edu.pe" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                <span style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-top: 4px;">Debe seguir la nomenclatura institucional (ej: jsotomayor&#64;unfv.edu.pe)</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Sede:</label>
+                  <select [ngModel]="newDocenteSede()" (change)="onDocenteSedeChange($event)" name="newDocenteSede" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                    <option value="" disabled selected>Seleccionar Sede</option>
+                    <option *ngFor="let s of sedesList" [value]="s.codigo">Sede {{ s.codigo }} - {{ s.direccion }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Facultad:</label>
+                  <select [ngModel]="newDocenteFacultad()" (change)="onDocenteFacultadChange($event)" [disabled]="!newDocenteSede()" name="newDocenteFacultad" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                    <option value="" disabled selected>Seleccionar Facultad</option>
+                    <option *ngFor="let f of newDocenteFacultades()" [value]="f.nombre">{{ f.nombre }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Tipo de Docente:</label>
+                  <select [ngModel]="newDocenteTipo()" (ngModelChange)="newDocenteTipo.set($event)" name="newDocenteTipo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 10px; border-radius: 10px; outline: none; font-size: 0.9rem;">
+                    <option value="Permanente">Permanente (Nombrado)</option>
+                    <option value="Contratado">Contratado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Escuela Profesional Principal:</label>
+                  <select [ngModel]="newDocenteEscuela()" (ngModelChange)="newDocenteEscuela.set($event)" [disabled]="!newDocenteFacultad()" name="newDocenteEscuela" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 10px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                    <option value="" disabled selected>Seleccionar Escuela</option>
+                    <option *ngFor="let e of newDocenteEscuelas()" [value]="e">{{ e }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Contraseña Temporal:</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input [type]="showNewDocentePassword() ? 'text' : 'password'" [ngModel]="newDocentePassword()" (ngModelChange)="newDocentePassword.set($event)" name="newDocentePassword" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 42px 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+                  <button type="button" (click)="showNewDocentePassword.set(!showNewDocentePassword())" style="position: absolute; right: 12px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg *ngIf="!showNewDocentePassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    <svg *ngIf="showNewDocentePassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="newDocenteSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+                ✓ {{ newDocenteSuccess() }}
+              </div>
+              <div *ngIf="newDocenteError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+                ✗ {{ newDocenteError() }}
+              </div>
+
+              <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px; padding: 14px;">
+                Crear Docente
+              </button>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- EDIT USER MODAL (fixed overlay) -->
+        <div *ngIf="showEditUserModal()" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 500px; display: flex; flex-direction: column; background: #ffffff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-glass);">
+            <!-- Modal Header -->
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+              <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">✏️ Modificar Acceso</h3>
+              <button (click)="showEditUserModal.set(false)" style="background: rgba(0,0,0,0.06); border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; padding: 6px 10px; line-height: 1; border-radius: 8px;">×</button>
+            </div>
+            
+            <!-- Modal Body -->
+            <form (submit)="onUpdateUser($event)" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nombre de Usuario:</label>
+                <input type="text" [ngModel]="editUsername()" (ngModelChange)="editUsername.set($event)" name="editUsername" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Correo Electrónico:</label>
+                <input type="email" [ngModel]="editEmail()" (ngModelChange)="editEmail.set($event)" name="editEmail" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Rol de Usuario:</label>
+                <select [ngModel]="editRol()" (ngModelChange)="editRol.set($event)" name="editRol" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+                  <option value="Admin">Administrador</option>
+                  <option value="Docente">Docente</option>
+                  <option value="Estudiante">Estudiante</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input [type]="showEditUserPassword() ? 'text' : 'password'" [ngModel]="editPassword()" (ngModelChange)="editPassword.set($event)" name="editPassword" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                  <button type="button" (click)="showEditUserPassword.set(!showEditUserPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                    <svg *ngIf="!showEditUserPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                    <svg *ngIf="showEditUserPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="editUserSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+                ✓ {{ editUserSuccess() }}
+              </div>
+              <div *ngIf="editUserError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+                ✗ {{ editUserError() }}
+              </div>
+
+              <!-- Actions -->
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+                <button type="button" (click)="showEditUserModal.set(false)" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
+                  💾 Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: SOLICITUDES DE TUTORÍA OTPS -->
+      <section *ngIf="activeTab() === 'tutoring-requests'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
+            <div>
+              <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Solicitudes de Tutorías OTPS</h2>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0 0;">Gestión de solicitudes y cancelaciones asignadas a tu facultad.</p>
+            </div>
+            
+            <!-- Sub tabs navigation -->
+            <div style="display: flex; gap: 8px;">
+              <button (click)="adminTutoringSubTab.set('requests')" 
+                      [style.background]="adminTutoringSubTab() === 'requests' ? 'var(--unfv-gold-primary)' : 'rgba(255,255,255,0.05)'"
+                      [style.color]="adminTutoringSubTab() === 'requests' ? '#000000' : 'var(--text-primary)'"
+                      style="font-size: 0.75rem; padding: 8px 16px; border: 1px solid var(--border-glass); border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                📋 Solicitudes ({{ adminTutoringRequests().length }})
+              </button>
+              <button (click)="adminTutoringSubTab.set('cancellations')" 
+                      [style.background]="adminTutoringSubTab() === 'cancellations' ? 'var(--unfv-gold-primary)' : 'rgba(255,255,255,0.05)'"
+                      [style.color]="adminTutoringSubTab() === 'cancellations' ? '#000000' : 'var(--text-primary)'"
+                      style="font-size: 0.75rem; padding: 8px 16px; border: 1px solid var(--border-glass); border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                ⚠️ Alertas de Cancelación
+              </button>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 1: SOLICITUDES LIST -->
+          <div *ngIf="adminTutoringSubTab() === 'requests'" style="display: flex; flex-direction: column; gap: 12px;">
+            <div *ngIf="adminTutoringRequests().length === 0" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.85rem;">
+              No hay solicitudes de tutoría en este momento.
+            </div>
+            
+            <div *ngFor="let r of adminTutoringRequests()" class="glass-card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); border-color: var(--border-glass);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <span [style.background]="r.estado === 'Pendiente' ? 'rgba(234,88,12,0.1)' : r.estado === 'Aprobado' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'"
+                        [style.color]="r.estado === 'Pendiente' ? '#f97316' : r.estado === 'Aprobado' ? '#34d399' : '#f87171'"
+                        style="font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; display: inline-block; margin-bottom: 6px;">
+                    {{ r.estado }}
+                  </span>
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">
+                    Curso: {{ r.nombre_curso }} ({{ r.id_curso }})
+                  </h4>
+                  <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">
+                    Solicitante: <strong>{{ r.nombre_alumno }}</strong> (Sede: {{ r.facultad_alumno }} · {{ r.escuela_alumno }})
+                  </p>
+                  <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">
+                    Alumnos: {{ r.cantidad_estudiantes }} estudiantes ({{ r.alumnos_unidos.length }} unidos)
+                  </p>
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                  <!-- Download Request Word File -->
+                  <a *ngIf="r.archivo_solicitud_path" [href]="getDownloadUrl(r.archivo_solicitud_path)" target="_blank" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px; display: flex; align-items: center; gap: 6px; text-decoration: none;">
+                    📥 Descargar Solicitud
+                  </a>
+                  
+                  <!-- Action Buttons for Pendiente status -->
+                  <ng-container *ngIf="r.estado === 'Pendiente'">
+                    <button (click)="selectRequestForApproval(r)" class="btn-primary" style="font-size: 0.7rem; padding: 6px 12px; box-shadow: none;">
+                      ✓ Aprobar & Programar
+                    </button>
+                    <button (click)="selectRequestForRejection(r)" style="font-size: 0.7rem; padding: 6px 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #f87171; border-radius: 6px; cursor: pointer;">
+                      ✗ Rechazar
+                    </button>
+                  </ng-container>
+                </div>
+              </div>
+
+              <!-- Approved detail display -->
+              <div *ngIf="r.estado === 'Aprobado'" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-default); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 0.75rem;">
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Docente Asignado:</span>
+                  <strong style="color: var(--text-primary);">{{ r.nombre_docente }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Horario:</span>
+                  <strong style="color: var(--text-primary);">{{ r.dia }} a las {{ r.hora }}</strong>
+                </div>
+                <div>
+                  <span style="color: var(--text-secondary); display: block;">Enlace de Clase:</span>
+                  <a [href]="r.link_llamada" target="_blank" style="color: var(--unfv-gold-primary); text-decoration: underline; font-weight: 700;">Unirse a la Reunión</a>
+                </div>
+              </div>
+
+              <!-- Rejected detail display -->
+              <div *ngIf="r.estado === 'Rechazado' && r.motivo_rechazo" style="margin-top: 8px; padding: 8px 12px; background: rgba(239,68,68,0.05); border-radius: 6px; border: 1px solid rgba(239,68,68,0.15); font-size: 0.75rem; color: #f87171;">
+                <strong>Motivo de Rechazo:</strong> {{ r.motivo_rechazo }}
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: CANCELLATIONS LIST -->
+          <div *ngIf="adminTutoringSubTab() === 'cancellations'" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Filter cancellations -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <ng-container *ngFor="let r of adminTutoringRequests()">
+                <!-- Show only requests that are 'Aprobado' but have a cancellation request, or are already 'Cancelado' -->
+                <div *ngIf="r.motivo_cancelacion_docente || r.estado === 'Cancelado'" class="glass-card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; background: rgba(239,68,68,0.02); border-color: rgba(239,68,68,0.15);">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                      <span [style.background]="r.estado === 'Cancelado' ? 'rgba(239,68,68,0.1)' : 'rgba(234,88,12,0.1)'"
+                            [style.color]="r.estado === 'Cancelado' ? '#f87171' : '#f97316'"
+                            style="font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; display: inline-block; margin-bottom: 6px;">
+                        {{ r.estado === 'Cancelado' ? 'Cancelado Definitivo' : 'Alerta de Cancelación' }}
+                      </span>
+                      <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">
+                        Docente: {{ r.nombre_docente }} solicita cancelación
+                      </h4>
+                      <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">
+                        Tutoría Programada: {{ r.nombre_curso }} ({{ r.id_curso }}) para el estudiante {{ r.nombre_alumno }}
+                      </p>
+                      <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">
+                        Horario original: {{ r.dia }} a las {{ r.hora }}
+                      </p>
+                      
+                      <div style="margin-top: 8px; padding: 8px 12px; background: rgba(0,0,0,0.1); border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-glass);">
+                        <strong>Justificación del Docente:</strong> {{ r.motivo_cancelacion_docente }}
+                      </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <!-- Download Evidence File -->
+                      <a *ngIf="r.archivo_cancelacion_path" [href]="getDownloadUrl(r.archivo_cancelacion_path)" target="_blank" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px; display: flex; align-items: center; gap: 6px; text-decoration: none;">
+                        📄 Ver Evidencia
+                      </a>
+                      
+                      <!-- Action buttons for active cancellation request -->
+                      <ng-container *ngIf="r.estado === 'Aprobado' && r.motivo_cancelacion_docente">
+                        <button (click)="onResolveCancellation(r, 'Aprobar')" class="btn-primary" style="background: #dc2626; color: #ffffff; font-size: 0.7rem; padding: 6px 12px; box-shadow: none; border-color: #dc2626;">
+                          ✓ Aprobar Cancelación
+                        </button>
+                        <button (click)="onResolveCancellation(r, 'Rechazar')" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px;">
+                          ✗ Rechazar Cancelación
+                        </button>
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+
+        <!-- REJECTION INPUT MODAL/OVERLAY -->
+        <div *ngIf="selectedRequestForRejection()" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 450px; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid var(--border-glass); overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">Rechazar Solicitud de Tutoría</h3>
+              <button (click)="selectedRequestForRejection.set(null)" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+            
+            <form (submit)="confirmRejection($event)" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Motivo del Rechazo:</label>
+                <textarea [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" name="rejectionReason" rows="3" placeholder="Ingresa la justificación oficial de OTPS para el rechazo..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.8rem; font-family: var(--font-body);" required></textarea>
+              </div>
+              
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" (click)="selectedRequestForRejection.set(null)" class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="background: #dc2626; border-color: #dc2626; color: #ffffff; font-size: 0.75rem; padding: 6px 12px;">Rechazar Solicitud</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- SCHEDULING & APPROVAL MODAL -->
+        <div *ngIf="selectedRequestForApproval() as req" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 500px; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid var(--border-glass); overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">Aprobar & Programar Tutoría Grupal</h3>
+              <button (click)="selectedRequestForApproval.set(null)" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+            
+            <form (submit)="confirmApproval($event)" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: bold; text-transform: uppercase;">Curso a Programar</span>
+                <h4 style="margin: 2px 0 10px 0; font-size: 0.9rem; font-weight: 800;">{{ req.nombre_curso }} ({{ req.id_curso }})</h4>
+              </div>
+              
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Escuela Profesional asignada:</label>
+                <input type="text" [ngModel]="approveEscuela()" (ngModelChange)="approveEscuela.set($event)" name="appEscuela" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem;" required>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Seleccionar Docente / Tutor:</label>
+                <select [ngModel]="approveDocenteId()" (ngModelChange)="approveDocenteId.set($event)" name="appDocente" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem;" required>
+                  <option [value]="null" disabled>Seleccionar docente</option>
+                  <option *ngFor="let t of adminTutorList()" [value]="t.id_docente">
+                    {{ t.nombre }} (Sede: {{ t.sede_codigo || 'N/A' }} · Facultad: {{ t.facultad }})
+                  </option>
+                </select>
+                <span *ngIf="adminTutorList().length === 0" style="font-size: 0.7rem; color: #f87171; display: block; margin-top: 4px;">
+                  ⚠️ No hay docentes disponibles para este curso. Debe registrar docentes para el curso primero.
+                </span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Día:</label>
+                  <select [ngModel]="approveDia()" (ngModelChange)="approveDia.set($event)" name="appDia" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem;">
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miércoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sábado">Sábado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Hora de Inicio:</label>
+                  <select [ngModel]="approveHora()" (ngModelChange)="approveHora.set($event)" name="appHora" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem;">
+                    <option value="08:00">08:00 AM</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="13:00">01:00 PM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="15:00">03:00 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                    <option value="17:00">05:00 PM</option>
+                    <option value="18:00">06:00 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Enlace de Reunión (Virtual MS Teams):</label>
+                <input type="text" [ngModel]="approveLink()" (ngModelChange)="approveLink.set($event)" name="appLink" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem;" required>
+              </div>
+
+              <div *ngIf="approveSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem; text-align: center;">
+                ✓ {{ approveSuccess() }}
+              </div>
+              
+              <div *ngIf="approveError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem; text-align: center;">
+                ✗ {{ approveError() }}
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+                <button type="button" (click)="selectedRequestForApproval.set(null)" class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="font-size: 0.75rem; padding: 6px 12px;" [disabled]="!approveDocenteId()">Aprobar Solicitud</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: PROFILE -->
+      <section *ngIf="activeTab() === 'profile'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 30px; max-width: 600px; margin: 0 auto; width: 100%;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px;" class="gold-text-gradient">Mi Perfil Institucional</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px;">Administra tu información y preferencias de acceso.</p>
+          
+          <div style="display: flex; gap: 24px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;">
+            <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; overflow: hidden; cursor: pointer; border: 3px solid var(--unfv-gold-primary); background: #f8fafc;"
+                 (click)="photoInput.click()" class="profile-photo-container">
+              <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
+              <div class="profile-photo-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease-in-out; color: #ffffff; font-size: 0.7rem; font-weight: bold; text-align: center; padding: 5px;">
+                Cambiar Foto
+              </div>
+            </div>
+            <input type="file" #photoInput (change)="onProfilePhotoChange($event)" accept="image/*" style="display: none;">
+            <div style="flex: 1; min-width: 200px;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: var(--text-primary);">{{ user.nombre }}</h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Rol: <span style="font-weight: 700; color: #ea580c;">{{ user.rol }}</span></p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Usuario: {{ user.username }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Correo: {{ user.email }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Facultad: {{ user.facultad }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Escuela Principal: {{ user.escuela }}</p>
+            </div>
+          </div>
+
+          <form (submit)="onUpdateProfile($event)" style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="border-top: 1px solid var(--border-default); padding-top: 16px;">
+              <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Modificar Contraseña</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileNewPassword() ? 'text' : 'password'" [ngModel]="profileNewPassword()" (ngModelChange)="profileNewPassword.set($event)" name="profNewPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileNewPassword.set(!showProfileNewPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Confirmar Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileConfirmPassword() ? 'text' : 'password'" [ngModel]="profileConfirmPassword()" (ngModelChange)="profileConfirmPassword.set($event)" name="profConfPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileConfirmPassword.set(!showProfileConfirmPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="profileSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+              ✓ {{ profileSuccess() }}
+            </div>
+            <div *ngIf="profileError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+              ✗ {{ profileError() }}
+            </div>
+
+            <div style="text-align: right; margin-top: 10px;">
+              <button type="submit" class="btn-primary" style="padding: 10px 20px; font-size: 0.8rem;">Guardar Cambios</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="margin-top: auto; padding: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary); border-top: 1px solid var(--border-default);">
+    <p>© 2026 Universidad Nacional Federico Villarreal. Extensión RBAC & Panel Administrativo de Control.</p>
+  </footer>
+
+</div>

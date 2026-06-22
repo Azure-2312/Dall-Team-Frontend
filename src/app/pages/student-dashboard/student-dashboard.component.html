@@ -1,0 +1,1341 @@
+<div class="app-container" style="display: flex; flex-direction: column; min-height: 100vh;" *ngIf="authService.currentUser() as user">
+  
+  <!-- HEADER BAR -->
+  <header class="glass-card" style="margin: 16px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; z-index: 10; background: #ffffff;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 48px; object-fit: contain;">
+      <div>
+        <h1 style="font-size: 1.3rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Tutor Inteligente Adaptativo</h1>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Portal de Retención Estudiantil - Universidad Nacional Federico Villarreal</p>
+      </div>
+    </div>
+
+    <!-- Logged User Info -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="foto" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--unfv-gold-primary);">
+      <div style="text-align: right;">
+        <h4 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">{{ user.nombre }}</h4>
+        <p style="margin: 0; font-size: 0.7rem; color: var(--text-secondary);">{{ user.escuela }} · Ciclo {{ user.ciclo }}°</p>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- MAIN BODY GRID LAYOUT -->
+  <div style="display: flex; flex: 1; padding: 0 16px 16px 16px; gap: 16px; flex-direction: row; @media (max-width: 992px) { flex-direction: column; }">
+    
+    <!-- SIDEBAR -->
+    <aside style="width: 260px; display: flex; flex-direction: column; gap: 16px; flex-shrink: 0;">
+      <nav class="glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 4px;">
+        <p style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); padding: 6px 10px; letter-spacing: 0.05em; margin: 0;">Mi Portal</p>
+        <button (click)="activeTab.set('courses')" [class.active]="activeTab() === 'courses' || activeTab() === 'course-workspace'" class="nav-btn">📚 Mis Cursos</button>
+        <button (click)="activeTab.set('evaluator')" [class.active]="activeTab() === 'evaluator'" class="nav-btn">🧠 Autoevaluación</button>
+        <button (click)="activeTab.set('resources')" [class.active]="activeTab() === 'resources'" class="nav-btn">🏛️ Biblioteca Koha</button>
+        <button (click)="activeTab.set('tutoring'); showTutorBubble('click_tutorias')" [class.active]="activeTab() === 'tutoring'" class="nav-btn">👨‍🏫 Tutorías</button>
+        <button (click)="activeTab.set('wellbeing')" [class.active]="activeTab() === 'wellbeing'" class="nav-btn" style="position: relative;">
+          🌱 Soporte OBU
+          <span *ngIf="tutorService.obuActive()" class="badge-alert-dot"></span>
+        </button>
+        <button (click)="activeTab.set('profile')" [class.active]="activeTab() === 'profile'" class="nav-btn">👤 Mi Perfil</button>
+        
+        <div style="border-top: 1px solid var(--border-default); margin: 6px 0; padding-top: 6px;">
+          <button (click)="onLogout()" class="nav-btn" style="color: #f87171;">🚪 Cerrar Sesión</button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- PORTAL WORKSPACE -->
+    <main style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+      
+      <!-- Weekly Foco Banner (Active Course) -->
+      <div *ngIf="activeTab() !== 'course-workspace' && tutorService.activeCourse() as active" class="glass-card" style="padding: 14px; background: linear-gradient(135deg, rgba(0, 45, 98, 0.2) 0%, rgba(0, 31, 77, 0.4) 100%); border-left: 4px solid var(--unfv-gold-primary); margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--unfv-gold-primary);">Foco de Asignatura: {{ active.nombre }}</span>
+          <span style="font-size: 0.65rem; color: var(--text-secondary);">Semana {{ tutorService.currentWeek() }}</span>
+        </div>
+        <p style="font-size: 0.9rem; font-weight: 600; color: #fff; margin: 0; line-height: 1.4;">
+          {{ bannerText() || 'Carga la malla y apunta las clases para habilitar el widget de foco diario.' }}
+        </p>
+      </div>
+
+
+      <!-- TAB: MIS CURSOS -->
+      <section *ngIf="activeTab() === 'courses'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Mis Asignaturas Matriculadas</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Selecciona un curso para ingresar a su panel de estudio, apuntes vectorizados y evaluaciones adaptativas.
+          </p>
+
+          <div *ngIf="tutorService.activeNotebooks().length === 0 && !showAddCourseModal()" style="text-align: center; padding: 30px 0; color: var(--text-secondary); font-size: 0.85rem;">
+            ⚠️ No te encuentras matriculado en ninguna asignatura. Usa el botón de abajo para agregar cursos.
+          </div>
+
+          <!-- Courses Grid of Square Buttons -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <div *ngFor="let course of tutorService.activeNotebooks()" 
+                 style="position: relative; aspect-ratio: 1 / 1; border-radius: 14px; border: 1.5px solid var(--border-glass); background: linear-gradient(135deg, rgba(0,45,98,0.04) 0%, rgba(212,175,55,0.05) 100%); transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
+              <button (click)="selectCourse(course)"
+                   class="course-square-btn"
+                   style="flex: 1; width: 100%; padding: 20px 14px; border-radius: 14px; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: transparent; transition: all 0.2s; gap: 8px;">
+                <span style="font-size: 0.6rem; font-weight: 700; color: var(--unfv-gold-primary); text-transform: uppercase; letter-spacing: 0.05em;">{{ course.id_curso }}</span>
+                <h4 style="font-size: 0.88rem; font-weight: 700; margin: 0; line-height: 1.3; color: var(--text-primary);">{{ course.nombre }}</h4>
+                <span style="font-size: 0.65rem; color: var(--text-secondary);">{{ course.creditos }} créditos</span>
+              </button>
+              <!-- Remove from enrollment button -->
+              <button (click)="removeCourseFromEnrollment(course.id_curso)"
+                      title="Retirar este curso"
+                      style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-weight: 700; line-height: 1;">
+                ×
+              </button>
+            </div>
+          </div>
+          <!-- Add Course Button aligned to the bottom-right inside the card -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+            <button (click)="showAddCourseModal.set(true)"
+                    class="btn-primary"
+                    style="padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; box-shadow: none; font-family: var(--font-body); font-weight: 700;">
+              <span>＋</span> Agregar curso
+            </button>
+          </div>
+        </div>
+
+        <!-- ADD COURSE MODAL (fixed overlay) -->
+        <div *ngIf="showAddCourseModal()" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 540px; max-height: 82vh; display: flex; flex-direction: column; background: #ffffff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-glass);">
+            <!-- Modal Header -->
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+              <div>
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Agregar Asignatura</h3>
+                <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-secondary);">Cursos de ciclos anteriores con prerrequisitos cumplidos, no aprobados ni inscritos.</p>
+              </div>
+              <button (click)="showAddCourseModal.set(false)" style="background: rgba(0,0,0,0.06); border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; padding: 6px 10px; line-height: 1; border-radius: 8px;">×</button>
+            </div>
+            <!-- Modal Body -->
+            <div style="flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px;">
+              <div *ngIf="tutorService.cicloOptions().length === 0" style="text-align: center; padding: 30px 0; color: var(--text-secondary); font-size: 0.85rem;">
+                ✅ No hay cursos adicionales disponibles. Todos los cursos con prerrequisitos cumplidos ya están inscritos o aprobados.
+              </div>
+              <div *ngFor="let option of tutorService.cicloOptions()" 
+                   style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border: 1px solid var(--border-glass); border-radius: 10px;">
+                <div>
+                  <span style="font-size: 0.6rem; color: var(--unfv-gold-primary); font-weight: 700; display: block; margin-bottom: 3px;">Ciclo {{ option.ciclo }} · {{ option.id_curso }} · {{ option.creditos }} créditos</span>
+                  <h5 style="font-size: 0.85rem; font-weight: 600; margin: 0; color: var(--text-primary);">{{ option.nombre }}</h5>
+                </div>
+                <button type="button" 
+                        (click)="addCourseToEnrollment(option.id_curso)" 
+                        class="btn-primary"
+                        style="font-size: 0.75rem; padding: 7px 14px; border-radius: 8px; box-shadow: none; flex-shrink: 0; margin-left: 14px;">
+                  ➕ Agregar
+                </button>
+              </div>
+            </div>
+            <!-- Modal Footer -->
+            <div style="padding: 14px 24px; border-top: 1px solid var(--border-default); text-align: right; background: #fafafa;">
+              <button (click)="showAddCourseModal.set(false)" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 20px;">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: COURSE WORKSPACE -->
+      <section *ngIf="activeTab() === 'course-workspace'" 
+               [ngStyle]="isWhiteboardMaximized() ? {
+                 'position': 'fixed',
+                 'top': '0',
+                 'left': '0',
+                 'right': '0',
+                 'bottom': '0',
+                 'z-index': '1000',
+                 'height': '100vh',
+                 'max-height': '100vh',
+                 'border-radius': '0',
+                 'border': 'none',
+                 'padding': '20px',
+                 'background': '#ffffff',
+                 'box-shadow': 'none'
+               } : {
+                 'position': 'relative',
+                 'height': 'calc(100vh - 160px)',
+                 'max-height': 'calc(100vh - 160px)',
+                 'background': '#ffffff',
+                 'border': '1px solid var(--border-glass)',
+                 'border-radius': '16px',
+                 'padding': '20px',
+                 'box-shadow': 'var(--shadow-card)'
+               }"
+               style="display: flex; flex-direction: column; flex: 1; overflow: hidden; box-sizing: border-box;">
+        <div *ngIf="tutorService.activeCourse() as active; else noCourseSelected" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
+          
+          <!-- Three-Panel Triptych Workspace Layout -->
+          <div style="display: flex; gap: 20px; flex: 1; min-height: 0; overflow: hidden;">
+            
+            <!-- Column 1 Wrapper -->
+            <div *ngIf="!isWhiteboardMaximized()" style="position: relative; display: flex; height: 100%; flex-shrink: 0; z-index: 60;">
+              <!-- Border collapse/expand tab -->
+              <button (click)="isLeftPanelRetracted.set(!isLeftPanelRetracted())" 
+                      class="border-collapse-btn"
+                      style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); z-index: 70; width: 24px; height: 48px; border-radius: 0 8px 8px 0; border: 1px solid #cbd5e1; border-left: none; background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 2px 0 8px rgba(0,0,0,0.08); padding: 0; font-size: 0.7rem; color: var(--text-secondary);"
+                      title="{{ isLeftPanelRetracted() ? 'Expandir panel' : 'Colapsar panel' }}">
+                {{ isLeftPanelRetracted() ? '▶' : '◀' }}
+              </button>
+
+              <div [style.width]="isLeftPanelRetracted() ? '50px' : '240px'" style="display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--border-default); padding-right: 8px; overflow: hidden; transition: width 0.2s ease; height: 100%;">
+                
+                <!-- When NOT Retracted -->
+                <div *ngIf="!isLeftPanelRetracted()" style="display: flex; flex-direction: column; gap: 8px; height: 100%; overflow: hidden;">
+                  <!-- Volver Button at the top of Left Panel -->
+                  <button (click)="goBackToCourses()" class="btn-secondary" style="font-size: 0.76rem; padding: 7px 12px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 8px; width: 100%; border: 1px solid var(--border-glass); background: #ffffff; cursor: pointer; flex-shrink: 0;">
+                    ← Volver a Cursos
+                  </button>
+                  
+                  <!-- SECTION: APUNTES (HOJAS) -->
+                  <div [style.flex]="isSheetsCollapsed() ? 'none' : '3'" style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden;">
+                    <div (click)="isSheetsCollapsed.set(!isSheetsCollapsed())" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; cursor: pointer; user-select: none; margin-top: 4px;">
+                      <h3 style="font-size: 0.8rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); text-transform: uppercase;">📝 Apuntes (Hojas)</h3>
+                      <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ isSheetsCollapsed() ? '▼' : '▲' }}</span>
+                    </div>
+
+                    <div *ngIf="!isSheetsCollapsed()" style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; overflow: hidden; margin-top: 4px;">
+                      <!-- Form to create a new sheet -->
+                      <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-shrink: 0;">
+                        <input type="text" [ngModel]="newSheetName()" (ngModelChange)="newSheetName.set($event)" placeholder="Nueva hoja..." style="flex: 1; font-size: 0.7rem; padding: 4px 8px; border: 1px solid var(--border-glass); border-radius: 6px; outline: none; background: #ffffff;">
+                        <button (click)="createSheet()" class="btn-primary" style="padding: 4px 8px; font-size: 0.7rem; border-radius: 6px; box-shadow: none; flex-shrink: 0;">+</button>
+                      </div>
+
+                      <div *ngIf="sheets().length === 0" style="text-align: center; padding: 12px; font-size: 0.65rem; color: var(--text-secondary); border: 1px dashed var(--border-glass); border-radius: 6px; flex-shrink: 0;">
+                        No has creado hojas adicionales.
+                      </div>
+
+                      <div style="display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1;">
+                        <div *ngFor="let sh of sheets()" 
+                             (click)="selectSheet(sh)"
+                             [style.background]="selectedSheet() === sh ? 'rgba(0, 45, 98, 0.08)' : 'transparent'"
+                             [style.border-color]="selectedSheet() === sh ? 'var(--unfv-blue-primary)' : 'transparent'"
+                             style="padding: 6px 8px; border-left: 3px solid transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;"
+                             class="week-nav-item">
+                          <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; padding-right: 6px;" [title]="sh">
+                            📄 {{ sh }}
+                          </span>
+                          <button (click)="deleteSheet(sh, $event)" style="background: transparent; border: none; font-size: 0.75rem; cursor: pointer; padding: 0; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;" title="Eliminar hoja">
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- SECTION: SÍLABO -->
+                  <div [style.flex]="isSyllabusCollapsed() ? 'none' : '7'" style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden;">
+                    <div (click)="isSyllabusCollapsed.set(!isSyllabusCollapsed())" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; cursor: pointer; user-select: none; margin-top: 8px;">
+                      <h3 style="font-size: 0.8rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); text-transform: uppercase;">🎓 Sílabo</h3>
+                      <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ isSyllabusCollapsed() ? '▼' : '▲' }}</span>
+                    </div>
+                    
+                    <div *ngIf="!isSyllabusCollapsed()" style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow-y: auto; padding-right: 2px;">
+                      <div *ngFor="let w of weeks()" 
+                           (click)="selectWeek(w.semana_numero); showTutorBubble('cambio_semana', { semana: w.semana_numero })" 
+                           [style.background]="selectedWeek() === w.semana_numero && !selectedSheet() ? 'rgba(0, 45, 98, 0.08)' : 'transparent'"
+                           [style.border-color]="selectedWeek() === w.semana_numero && !selectedSheet() ? 'var(--unfv-blue-primary)' : 'transparent'"
+                           style="padding: 6px 8px; border-left: 3px solid transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                           class="week-nav-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-size: 0.65rem; font-weight: 700; color: var(--unfv-blue-primary);">Semana {{ w.semana_numero }}</span>
+                          <span *ngIf="tutorService.currentWeek() === w.semana_numero" style="font-size: 0.5rem; font-weight: 800; background: #e0f2fe; color: #0369a1; padding: 0 4px; border-radius: 3px;">ACTUAL</span>
+                        </div>
+                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" [title]="w.tema_central">
+                          {{ w.tema_central }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- When Retracted -->
+                <div *ngIf="isLeftPanelRetracted()" style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; overflow-y: auto;">
+                  <!-- Circular back button -->
+                  <button (click)="goBackToCourses()" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-glass); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; margin-bottom: 4px; flex-shrink: 0;" title="Volver a Cursos">
+                    🔙
+                  </button>
+                  
+                  <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; align-items: center; width: 100%;">
+                    <!-- Custom sheets circles (Hojas) first -->
+                    <ng-container *ngIf="sheets().length > 0">
+                      <div style="font-size: 0.55rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 2px; text-transform: uppercase;">H</div>
+                      <div *ngFor="let sh of sheets(); let idx = index" 
+                           (click)="selectSheet(sh)"
+                           [style.background]="selectedSheet() === sh ? 'var(--unfv-blue-primary)' : 'rgba(0,45,98,0.03)'"
+                           [style.color]="selectedSheet() === sh ? '#ffffff' : 'var(--text-primary)'"
+                           style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 800; cursor: pointer; transition: all 0.2s;"
+                           [title]="sh">
+                        H{{ idx + 1 }}
+                      </div>
+                      <div style="width: 16px; height: 1px; background: var(--border-default); margin: 6px 0;"></div>
+                    </ng-container>
+
+                    <!-- Weeks (Syllabus) circles second -->
+                    <div style="font-size: 0.55rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 2px; text-transform: uppercase;">W</div>
+                    <div *ngFor="let w of weeks()" 
+                         (click)="selectWeek(w.semana_numero); showTutorBubble('cambio_semana', { semana: w.semana_numero })"
+                         [style.background]="selectedWeek() === w.semana_numero && !selectedSheet() ? 'var(--unfv-blue-primary)' : 'rgba(0,45,98,0.03)'"
+                         [style.color]="selectedWeek() === w.semana_numero && !selectedSheet() ? '#ffffff' : 'var(--text-primary)'"
+                         style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 800; cursor: pointer; transition: all 0.2s;"
+                         [title]="'Semana ' + w.semana_numero + ': ' + w.tema_central">
+                      S{{ w.semana_numero }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 2: Middle Panel (Whiteboard Canvas Workspace) -->
+            <div style="flex: 2; display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding-right: 4px; padding-left: 4px; position: relative;">
+              <!-- Topic and Readings -->
+              <div *ngIf="!selectedSheet()" style="padding: 10px 14px; background: rgba(0, 45, 98, 0.02); border: 1px solid rgba(0, 45, 98, 0.04); border-radius: 10px; flex-shrink: 0;">
+                <h4 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 4px 0; color: var(--unfv-blue-primary);">
+                  Tema: {{ getSelectedWeekTheme() }}
+                </h4>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.3;">
+                  <strong>Lecturas Obligatorias:</strong> {{ getSelectedWeekReadings() }}
+                </div>
+              </div>
+
+              <!-- Whiteboard Toolbar -->
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border-default); padding-bottom: 8px; flex-shrink: 0;">
+                <!-- Drawing Tools Selector -->
+                <div style="display: flex; background: #f1f5f9; padding: 2px; border-radius: 6px; gap: 1px;">
+                  <button (click)="drawingTool.set('pencil')" 
+                          [style.background]="drawingTool() === 'pencil' ? '#ffffff' : 'transparent'"
+                          [style.color]="drawingTool() === 'pencil' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          [style.box-shadow]="drawingTool() === 'pencil' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+                          style="font-size: 0.68rem; font-weight: 700; padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s;"
+                          title="Lápiz para dibujar">
+                    ✏️ Lápiz
+                  </button>
+                  <button (click)="drawingTool.set('highlighter')" 
+                          [style.background]="drawingTool() === 'highlighter' ? '#ffffff' : 'transparent'"
+                          [style.color]="drawingTool() === 'highlighter' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          [style.box-shadow]="drawingTool() === 'highlighter' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+                          style="font-size: 0.68rem; font-weight: 700; padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s;"
+                          title="Resaltador translúcido">
+                    🖌️ Resaltador
+                  </button>
+                  <button (click)="drawingTool.set('text')" 
+                          [style.background]="drawingTool() === 'text' ? '#ffffff' : 'transparent'"
+                          [style.color]="drawingTool() === 'text' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          [style.box-shadow]="drawingTool() === 'text' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+                          style="font-size: 0.68rem; font-weight: 700; padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s;"
+                          title="Añadir texto por teclado">
+                    🔤 Texto
+                  </button>
+                  <button (click)="drawingTool.set('eraser')" 
+                          [style.background]="drawingTool() === 'eraser' ? '#ffffff' : 'transparent'"
+                          [style.color]="drawingTool() === 'eraser' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          [style.box-shadow]="drawingTool() === 'eraser' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+                          style="font-size: 0.68rem; font-weight: 700; padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s;"
+                          title="Borrador">
+                    🧽 Borrador
+                  </button>
+                  <button (click)="drawingTool.set('select')" 
+                          [style.background]="drawingTool() === 'select' ? '#ffffff' : 'transparent'"
+                          [style.color]="drawingTool() === 'select' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          [style.box-shadow]="drawingTool() === 'select' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+                          style="font-size: 0.68rem; font-weight: 700; padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; transition: all 0.15s;"
+                          title="Mover o seleccionar texto/imagen">
+                    🖱️ Mover
+                  </button>
+                </div>
+
+                <!-- Zoom Controls -->
+                <div style="display: flex; align-items: center; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: 6px;">
+                  <button (click)="zoomOut()" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer;" title="Zoom Out">➖</button>
+                  <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); width: 30px; text-align: center;">{{ (zoom * 100) | number:'1.0-0' }}%</span>
+                  <button (click)="zoomIn()" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer;" title="Zoom In">➕</button>
+                  <button (click)="resetZoom()" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer;" title="Restaurar zoom">🔄</button>
+                </div>
+
+                <!-- Undo/Redo Buttons -->
+                <div style="display: flex; align-items: center; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: 6px;">
+                  <button (click)="undo()" 
+                          [disabled]="undoStack.length === 0" 
+                          [style.opacity]="undoStack.length === 0 ? '0.4' : '1'" 
+                          [style.cursor]="undoStack.length === 0 ? 'not-allowed' : 'pointer'"
+                          style="font-size: 0.68rem; font-weight: 700; border: none; background: transparent; padding: 4px 8px; display: flex; align-items: center; gap: 2px; color: var(--text-secondary);" 
+                          title="Retroceder cambio (Deshacer)">
+                    ↩️ Retroceder
+                  </button>
+                  <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
+                  <button (click)="redo()" 
+                          [disabled]="redoStack.length === 0" 
+                          [style.opacity]="redoStack.length === 0 ? '0.4' : '1'" 
+                          [style.cursor]="redoStack.length === 0 ? 'not-allowed' : 'pointer'"
+                          style="font-size: 0.68rem; font-weight: 700; border: none; background: transparent; padding: 4px 8px; display: flex; align-items: center; gap: 2px; color: var(--text-secondary);" 
+                          title="Avanzar cambio (Rehacer)">
+                    Avanzar ↪️
+                  </button>
+                </div>
+
+                <!-- Selected Text properties -->
+                <div *ngIf="selectedTextIndex() !== null" style="display: flex; align-items: center; gap: 2px; background: #fffbeb; border: 1px solid #fde68a; padding: 2px; border-radius: 6px;">
+                  <button (click)="resizeSelectedText(-2)" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; font-weight: 700;" title="Achicar letra">A-</button>
+                  <button (click)="resizeSelectedText(2)" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; font-weight: 700;" title="Agrandar letra">A+</button>
+                  <button (click)="deleteSelectedText()" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; color: #ef4444; font-weight: 700;" title="Eliminar texto">🗑️ Borrar</button>
+                </div>
+
+                <!-- Selected Image properties -->
+                <div *ngIf="selectedImageIndex() !== null" style="display: flex; align-items: center; gap: 2px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px; border-radius: 6px;">
+                  <button (click)="resizeSelectedImage(-30)" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; font-weight: 700;" title="Achicar imagen">🖼️-</button>
+                  <button (click)="resizeSelectedImage(30)" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; font-weight: 700;" title="Agrandar imagen">🖼️+</button>
+                  <button (click)="deleteSelectedImage()" style="font-size: 0.65rem; border: none; background: transparent; padding: 3px 6px; cursor: pointer; color: #ef4444; font-weight: 700;" title="Eliminar imagen">🗑️ Borrar</button>
+                </div>
+
+                <!-- Color Picker and brush sizes -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 2px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary);">Color:</span>
+                    <input type="color" 
+                           [ngModel]="brushColor()" 
+                           (ngModelChange)="brushColor.set($event); updateBrush()"
+                           style="width: 22px; height: 22px; border: 1px solid #cbd5e1; padding: 0; background: transparent; cursor: pointer; border-radius: 4px;">
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary);">
+                      {{ drawingTool() === 'text' ? 'Fuente:' : 'Grosor:' }}
+                    </span>
+                    <input *ngIf="drawingTool() !== 'text'" 
+                           type="range" min="1" max="15" 
+                           [ngModel]="brushSize()" 
+                           (ngModelChange)="brushSize.set($event); updateBrush()" 
+                           style="width: 50px; height: 3px; accent-color: var(--unfv-blue-primary);">
+                    <input *ngIf="drawingTool() === 'text'" 
+                           type="range" min="12" max="32" 
+                           [ngModel]="fontSize()" 
+                           (ngModelChange)="fontSize.set($event)" 
+                           style="width: 50px; height: 3px; accent-color: var(--unfv-blue-primary);">
+                    <span style="font-size: 0.62rem; font-weight: 700; color: var(--text-secondary); width: 15px;">
+                      {{ drawingTool() === 'text' ? fontSize() : brushSize() }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Background Ingester -->
+                <div style="display: flex; gap: 4px;">
+                  <input type="file" #bgFileInput (change)="onBgFileSelected($event)" accept="image/*,application/pdf" style="display: none;">
+                  <button (click)="bgFileInput.click()" 
+                          class="btn-secondary" 
+                          style="font-size: 0.65rem; padding: 5px 8px; border-radius: 4px; box-shadow: none; border: 1px solid #cbd5e1; background: #ffffff; display: flex; align-items: center; gap: 2px;">
+                    📎 Subir archivo
+                  </button>
+                  <button *ngIf="uploadedBgUrl()" 
+                          (click)="removeBg()" 
+                          style="font-size: 0.65rem; padding: 5px 8px; background: #fef2f2; border: 1px solid #fee2e2; color: #ef4444; border-radius: 4px; cursor: pointer;">
+                    ❌ Quitar archivo
+                  </button>
+                  <button (click)="clearCanvas()" 
+                          style="font-size: 0.65rem; padding: 5px 8px; background: #f8fafc; border: 1px solid #cbd5e1; color: var(--text-secondary); border-radius: 4px; cursor: pointer;">
+                    🗑️ Limpiar
+                  </button>
+                  <button (click)="toggleWhiteboardMaximize()" 
+                          style="font-size: 0.65rem; padding: 5px 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 2px;"
+                          [style.background]="isWhiteboardMaximized() ? '#eff6ff' : '#f8fafc'"
+                          [style.border]="isWhiteboardMaximized() ? '1px solid #bfdbfe' : '1px solid #cbd5e1'"
+                          [style.color]="isWhiteboardMaximized() ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'"
+                          title="Alternar pantalla grande de la pizarra">
+                    {{ isWhiteboardMaximized() ? '🔍 Achicar' : '🔎 Expandir' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Whiteboard Drawing Board Container (fills the height!) -->
+              <div style="flex: 1; position: relative; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; background-color: #ffffff; background-size: 20px 20px; background-image: linear-gradient(to right, #f8fafc 1px, transparent 1px), linear-gradient(to bottom, #f8fafc 1px, transparent 1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);">
+                
+                <!-- Attached PDF Indicator badge -->
+                <div *ngIf="isBgPdf()" style="position: absolute; top: 12px; left: 12px; z-index: 10; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.95); border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 8px; font-size: 0.7rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                  <span>📄</span>
+                  <a [href]="uploadedBgUrl()" target="_blank" style="color: var(--unfv-blue-primary); font-weight: 700; text-decoration: underline;">
+                    Documento PDF cargado de fondo (Abrir)
+                  </a>
+                </div>
+
+                <!-- Transparent Interactive Canvas Overlay (Background is drawn inside canvas dynamically) -->
+                <canvas id="whiteboardCanvas"
+                        (mousedown)="startDrawing($event)"
+                        (mousemove)="draw($event)"
+                        (mouseup)="stopDrawing($event)"
+                        (mouseleave)="stopDrawing($event)"
+                        (wheel)="onWheelZoom($event)"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; display: block;"></canvas>
+              </div>
+
+              <!-- Save Status & Save Button (no textarea!) -->
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <div style="font-size: 0.72rem;">
+                  <span *ngIf="notesSaveSuccess()" style="color: #10b981; font-weight: 700;">✓ {{ notesSaveSuccess() }}</span>
+                  <span *ngIf="notesSaveError()" style="color: #ef4444; font-weight: 700;">✗ {{ notesSaveError() }}</span>
+                </div>
+                <button (click)="saveNotesAndCanvas()" 
+                        [disabled]="notesSaving()" 
+                        class="btn-primary" 
+                        style="font-size: 0.74rem; padding: 8px 20px; border-radius: 6px; box-shadow: none;">
+                  {{ notesSaving() ? 'Guardando...' : '💾 Guardar Pizarra' }}
+                </button>
+              </div>
+
+
+            </div>
+
+            <!-- Column 3 Wrapper -->
+            <div *ngIf="!isWhiteboardMaximized()" style="position: relative; display: flex; height: 100%; flex-shrink: 0; z-index: 60;">
+              <!-- Border collapse/expand tab -->
+              <button (click)="isRightPanelRetracted.set(!isRightPanelRetracted())" 
+                      class="border-collapse-btn"
+                      style="position: absolute; left: -12px; top: 50%; transform: translateY(-50%); z-index: 70; width: 24px; height: 48px; border-radius: 8px 0 0 8px; border: 1px solid #cbd5e1; border-right: none; background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: -2px 0 8px rgba(0,0,0,0.08); padding: 0; font-size: 0.7rem; color: var(--text-secondary);"
+                      title="{{ isRightPanelRetracted() ? 'Expandir chat' : 'Colapsar chat' }}">
+                {{ isRightPanelRetracted() ? '◀' : '▶' }}
+              </button>
+
+              <div [style.width]="isRightPanelRetracted() ? '40px' : '310px'" style="display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding-left: 4px; height: 100%; transition: width 0.2s ease; border-left: 1px solid var(--border-default);">
+                
+                <!-- When NOT Retracted -->
+                <div *ngIf="!isRightPanelRetracted()" style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                    <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); display: flex; align-items: center; gap: 4px;">
+                      <span>🧠</span> Tutor IA
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 0.6rem; background: rgba(0, 45, 98, 0.06); color: var(--unfv-blue-primary); font-weight: 800; padding: 2px 6px; border-radius: 4px;">
+                        Semana {{ selectedWeek() }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Chat Logs list -->
+                  <div id="chatMessagesContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; min-height: 0;">
+                    <!-- Welcoming text -->
+                    <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
+                      ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre el tema de la <strong>Semana {{ selectedWeek() }}</strong> y te recomendaré libros físicos de tu facultad.
+                    </div>
+                    
+                    <!-- History loop -->
+                    <div *ngFor="let msg of chatHistory()" 
+                         [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
+                         [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
+                         [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
+                         [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
+                         [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
+                         style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.72rem; line-height: 1.4; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
+                      {{ msg.text }}
+                      
+                      <!-- Contextual interactive options inside chat bubble -->
+                      <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
+                        <button *ngFor="let opt of msg.options"
+                                (click)="respondToTutorTooltip(opt)"
+                                class="btn-primary"
+                                style="font-size: 0.65rem; padding: 5px 10px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
+                          {{ opt }}
+                        </button>
+                      </div>
+                      
+                      <!-- Recommended books inside AI chat bubble -->
+                      <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
+                          📖 Libros en tu Facultad:
+                        </div>
+                        
+                        <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                          <img *ngIf="bk.portada" 
+                               [src]="bk.portada" 
+                               style="width: 30px; height: 42px; object-fit: cover; border-radius: 3px; border: 1px solid #e2e8f0; flex-shrink: 0;" 
+                               alt="tapa">
+                          <div *ngIf="!bk.portada" 
+                               style="width: 30px; height: 42px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; color: #64748b;">
+                            📘
+                          </div>
+                          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                              <div style="font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);" [title]="bk.titulo">
+                                {{ bk.titulo }}
+                              </div>
+                              <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.autor">
+                                {{ bk.autor }}
+                              </div>
+                            </div>
+                            <div style="font-size: 0.6rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start;">
+                              Signatura: {{ bk.signatura }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Loading bubble -->
+                    <div *ngIf="chatLoading()" style="align-self: flex-start; background: #e2e8f0; color: var(--text-secondary); padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; display: flex; align-items: center; gap: 4px;">
+                      <span>🧠</span> Analizando tema...
+                    </div>
+                  </div>
+                  
+                  <!-- Chat Input Box -->
+                  <div style="display: flex; gap: 4px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0; margin-top: auto;">
+                    <input type="text" 
+                           [(ngModel)]="chatMessage" 
+                           (keydown.enter)="sendChatMessage()"
+                           [disabled]="chatLoading()"
+                           placeholder="Preguntar al Tutor IA..." 
+                           style="flex: 1; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.74rem; outline: none; height: 34px;">
+                    <button (click)="sendChatMessage()" 
+                            [disabled]="chatLoading() || !chatMessage().trim()" 
+                            class="btn-primary" 
+                            style="padding: 0 12px; font-size: 0.72rem; border-radius: 6px; box-shadow: none; height: 34px;">
+                      Preguntar
+                    </button>
+                  </div>
+                </div>
+
+                <!-- When Retracted -->
+                <div *ngIf="isRightPanelRetracted()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
+                  <div style="background: var(--unfv-blue-primary); color: #ffffff; padding: 12px 6px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 30px;"
+                       title="Chat IA colapsado">
+                    <span>🧠</span>
+                    <span style="writing-mode: vertical-rl; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;">CHAT IA</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <ng-template #noCourseSelected>
+          <div style="text-align: center; padding: 40px 0; color: var(--text-secondary); font-size: 0.9rem;">
+            ⚠️ No se ha seleccionado ninguna asignatura.
+          </div>
+        </ng-template>
+      </section>
+
+      <!-- TAB 3: QUIZ EVALUATOR -->
+      <section *ngIf="activeTab() === 'evaluator'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Evaluador Chrono-Filtro</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Practica temas hasta la semana anterior. Las debilidades se priorizan.</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 240px; gap: 16px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+            
+            <!-- Active Quiz -->
+            <div>
+              <div *ngIf="!activeQuiz() && !quizLoading()" style="text-align: center; padding: 30px; border: 1px dashed var(--border-glass); border-radius: 8px;">
+                <button (click)="startQuiz()" class="btn-primary" style="font-size: 0.8rem; padding: 10px 20px;">Generar Quiz Adaptativo</button>
+              </div>
+
+              <div *ngIf="quizLoading()" style="text-align: center; padding: 30px 0;">
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Generando cuestionario estructurado...</p>
+              </div>
+
+              <div *ngIf="quizError()" style="padding: 10px; background: rgba(239,68,68,0.1); border-radius: 6px; color: #f87171; font-size: 0.75rem; margin-bottom: 12px;">
+                ⚠️ {{ quizError() }}
+              </div>
+
+              <div *ngIf="activeQuiz() as list">
+                <div *ngIf="currentQuestionIndex() < list.length">
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px;">Pregunta {{ currentQuestionIndex() + 1 }} de {{ list.length }}</p>
+                  <div class="glass-card" style="padding: 14px; margin-bottom: 12px; background: rgba(255,255,255,0.01);">
+                    <h4 style="font-size: 0.85rem; font-weight: 600; line-height: 1.4;">{{ list[currentQuestionIndex()].question }}</h4>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+                    <div *ngFor="let opt of list[currentQuestionIndex()].options; let idx = index" 
+                         (click)="selectOption(idx)"
+                         [class.option-selected]="selectedOptionIndex() === idx && !quizSubmitted()"
+                         [class.option-correct]="quizSubmitted() && list[currentQuestionIndex()].correct_index === idx"
+                         [class.option-incorrect]="quizSubmitted() && selectedOptionIndex() === idx && list[currentQuestionIndex()].correct_index !== idx"
+                         class="quiz-option-card" style="font-size: 0.8rem; padding: 10px;">
+                      <span style="font-weight: 700; color: var(--unfv-gold-primary); margin-right: 6px;">{{ ['A','B','C','D'][idx] }}.</span>
+                      <span>{{ opt }}</span>
+                    </div>
+                  </div>
+
+                  <div *ngIf="quizSubmitted()" class="glass-card" style="padding: 10px; margin-bottom: 12px; font-size: 0.75rem; background: rgba(212,175,55,0.02);">
+                    <strong>Feedback:</strong> {{ list[currentQuestionIndex()].feedback }}
+                  </div>
+
+                  <div style="text-align: right;">
+                    <button *ngIf="!quizSubmitted()" (click)="submitAnswer()" [disabled]="selectedOptionIndex() === null" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Validar</button>
+                    <button *ngIf="quizSubmitted()" (click)="nextQuestion()" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Siguiente</button>
+                  </div>
+                </div>
+
+                <!-- Quiz complete -->
+                <div *ngIf="currentQuestionIndex() >= list.length" style="text-align: center; padding: 20px 0;">
+                  <h4 style="font-size: 1.1rem;" class="gold-text-gradient">¡Cuestionario Completado!</h4>
+                  <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Nota: {{ (score() / list.length * 20) | number:'2.0-0' }} / 20</p>
+                  <button (click)="activeQuiz.set(null)" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Volver</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weaknesses -->
+            <div class="glass-card" style="padding: 12px; background: rgba(239,68,68,0.01); border-color: rgba(239,68,68,0.1);">
+              <h4 style="font-size: 0.8rem; color: #fca5a5; margin-bottom: 8px;">🎯 Debilidades Activas</h4>
+              <div *ngFor="let deb of weaknesses()" class="glass-card" style="padding: 8px; margin-bottom: 6px; background: rgba(239,68,68,0.03); font-size: 0.7rem; border-color: rgba(239,68,68,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 80%;">{{ deb.tema }}</span>
+                  <span class="badge-failed" style="font-size: 0.55rem; padding: 0 4px;">{{ deb.errores_count }} Err</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: BIBLIOTECA KOHA -->
+      <section *ngIf="activeTab() === 'resources'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Catálogo Koha UNFV</h2>
+          <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px;">Consulta el inventario de libros físicos, signaturas y disponibilidad de ejemplares por sede en tiempo real.</p>
+          
+          <form (submit)="searchKoha($event)" style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+            <input type="text" [ngModel]="kohaSearchQuery()" (ngModelChange)="kohaSearchQuery.set($event)" name="koha" placeholder="Buscar por título, autor o tema en Koha..." style="flex: 2; min-width: 200px; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+            <!-- Custom library dropdown selector -->
+            <div class="custom-dropdown-container" style="flex: 1; min-width: 160px; max-width: 280px;">
+              <div (click)="toggleKohaSedeDropdown($event)" class="custom-dropdown-trigger">
+                <span style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                  {{ getSelectedKohaSedeName() }}
+                </span>
+                <span style="font-size: 0.55rem; color: var(--text-secondary); margin-left: 8px;">▼</span>
+              </div>
+              
+              <!-- Transparent overlay to close dropdown when clicking outside -->
+              <div *ngIf="isKohaSedeDropdownOpen()" (click)="isKohaSedeDropdownOpen.set(false); $event.stopPropagation()" class="custom-dropdown-overlay"></div>
+              
+              <!-- Options list with max height and scrolling -->
+              <div *ngIf="isKohaSedeDropdownOpen()" class="custom-dropdown-list">
+                <div *ngFor="let opt of kohaSedes" 
+                     (click)="selectKohaSede(opt.code)" 
+                     [class.selected]="kohaSearchSede() === opt.code"
+                     class="custom-dropdown-item">
+                  {{ opt.name }}
+                </div>
+              </div>
+            </div>
+            <button type="submit" [disabled]="kohaSearchLoading()" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px; flex-shrink: 0;">Buscar</button>
+          </form>
+
+          <!-- Loader -->
+          <div *ngIf="kohaSearchLoading()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 12px;">
+            <div style="width: 32px; height: 32px; border: 3px solid rgba(234,88,12,0.1); border-top-color: var(--unfv-gold-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Buscando en el catálogo en tiempo real...</span>
+          </div>
+
+          <!-- Error Alert -->
+          <div *ngIf="kohaSearchError() as errorMsg" class="glass-card" style="padding: 16px; background: rgba(239,68,68,0.04); border-color: rgba(239,68,68,0.25); margin-bottom: 16px; display: flex; align-items: flex-start; gap: 12px;">
+            <span style="font-size: 1.2rem; line-height: 1;">⚠️</span>
+            <div style="flex: 1;">
+              <h5 style="margin: 0 0 4px 0; font-size: 0.8rem; font-weight: 700; color: #f87171;">Error de Catálogo</h5>
+              <p style="margin: 0; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.45;">{{ errorMsg }}</p>
+            </div>
+          </div>
+
+          <!-- Empty Results -->
+          <div *ngIf="kohaBooks().length === 0 && !kohaSearchLoading() && !kohaSearchError()" style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 0.8rem; border: 1px dashed rgba(234,88,12,0.15); border-radius: 12px; background: rgba(255,255,255,0.005);">
+            <span style="font-size: 2rem; display: block; margin-bottom: 8px;">📚</span>
+            Ingresa una palabra clave y presiona buscar para consultar el OPAC UNFV.
+          </div>
+
+          <!-- Horizontal Results Grid -->
+          <div *ngIf="kohaBooks().length > 0 && !kohaSearchLoading()" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;">
+            <div *ngFor="let book of kohaBooks()" class="glass-card" style="display: flex; gap: 14px; padding: 14px; background: rgba(255,255,255,0.015); align-items: stretch; transition: transform 0.2s ease, border-color 0.2s ease; cursor: default;">
+              
+              <!-- Left side: Cover or custom gradient placeholder -->
+              <div style="width: 90px; min-width: 90px; height: 130px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.05); border: 1px solid var(--border-glass); position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0;">
+                <img *ngIf="book.portada" [src]="book.portada" alt="Portada" style="width: 100%; height: 100%; object-fit: cover;">
+                <div *ngIf="!book.portada" style="width: 100%; height: 100%; background: linear-gradient(135deg, #002d62 0%, #1e3a8a 50%, #ea580c 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; text-align: center; color: #ffffff;">
+                  <span style="font-size: 1.5rem; margin-bottom: 4px;">📖</span>
+                  <span style="font-size: 0.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; line-height: 1.1;">UNFV OPAC</span>
+                </div>
+              </div>
+
+              <!-- Right side: Metadata and Branch availability breakdown -->
+              <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+                <div>
+                  <!-- Badges header -->
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span style="font-size: 0.58rem; font-weight: 700; padding: 1px 5px; background: rgba(234,88,12,0.08); color: var(--unfv-gold-primary); border: 1px solid rgba(234,88,12,0.2); border-radius: 4px; font-family: monospace; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 130px;" [title]="book.signatura">
+                      {{ book.signatura }}
+                    </span>
+                    <span [style.background]="book.disponible ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'" 
+                          [style.color]="book.disponible ? '#10b981' : '#f87171'"
+                          [style.border-color]="book.disponible ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'"
+                          style="font-size: 0.58rem; font-weight: 700; padding: 1px 5px; border: 1px solid; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;">
+                      {{ book.disponible ? 'Disponible' : 'Sin ejemplares' }}
+                    </span>
+                  </div>
+
+                  <!-- Title -->
+                  <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin: 0 0 3px 0; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" [title]="book.titulo">
+                    {{ book.titulo }}
+                  </h4>
+
+                  <!-- Author -->
+                  <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0 0 4px 0; font-style: italic; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" [title]="book.autor">
+                    por {{ book.autor }}
+                  </p>
+
+                  <!-- Edition / Publication details -->
+                  <p *ngIf="book.edicion || book.publicacion" style="font-size: 0.62rem; color: var(--text-secondary); margin: 0 0 6px 0; opacity: 0.85; line-height: 1.2; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" [title]="(book.edicion ? book.edicion + ' - ' : '') + book.publicacion">
+                    <span *ngIf="book.edicion" style="font-weight: 600; margin-right: 4px;">{{ book.edicion }}</span>
+                    <span *ngIf="book.publicacion">{{ book.publicacion }}</span>
+                  </p>
+                </div>
+
+                <!-- Availability per branch -->
+                <div style="border-top: 1px dashed var(--border-glass); padding-top: 5px; margin-top: 4px;">
+                  <div *ngIf="book.sedes && book.sedes.length > 0; else noSedes" style="display: flex; flex-direction: column; gap: 3px; max-height: 48px; overflow-y: auto; padding-right: 2px;">
+                    <div *ngFor="let s of book.sedes" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; line-height: 1.2; color: var(--text-secondary);">
+                      <span style="font-weight: 500; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;" [title]="s.sede">
+                        📍 {{ s.sede }}
+                      </span>
+                      <span style="font-weight: 700; color: #10b981; margin-left: 6px; flex-shrink: 0; background: rgba(16,185,129,0.06); padding: 1px 4px; border-radius: 3px;">
+                        {{ s.copias }} ej.
+                      </span>
+                    </div>
+                  </div>
+                  <ng-template #noSedes>
+                    <span style="font-size: 0.58rem; color: var(--text-secondary); font-style: italic;">
+                      No hay ejemplares disponibles para préstamo.
+                    </span>
+                  </ng-template>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: TUTORIAS -->
+      <section *ngIf="activeTab() === 'tutoring'" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Warning alert if student is sanctioned -->
+        <div *ngIf="isStudentSancionado()" class="glass-card" style="padding: 16px; background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.25); display: flex; align-items: flex-start; gap: 12px;">
+          <span style="font-size: 1.4rem; line-height: 1;">🚫</span>
+          <div style="flex: 1;">
+            <h5 style="margin: 0 0 4px 0; font-size: 0.85rem; font-weight: 700; color: #f87171;">Acceso Restringido</h5>
+            <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.45;">
+              Te encuentras sancionado temporalmente por la Oficina de Tutoría y Psicopedagogía (OTPS) debido al incumplimiento de las normas de convivencia en tutorías grupales anteriores. No puedes crear nuevas solicitudes ni unirte a otras programadas.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          
+          <!-- Column 1: Request Tutoring Form -->
+          <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; height: fit-content;">
+            <div>
+              <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 4px;" class="gold-text-gradient">Solicitud de Tutoría Grupal (OTPS)</h2>
+              <p style="font-size: 0.72rem; color: var(--text-secondary);">Envía una solicitud formal adjuntando el documento de firmas y la justificación al administrador OTPS de tu facultad.</p>
+            </div>
+
+            <div *ngIf="reqSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem;">
+              ✓ {{ reqSuccess() }}
+            </div>
+            <div *ngIf="reqError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem;">
+              ⚠️ {{ reqError() }}
+            </div>
+
+            <!-- Form fields -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="display: block; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Curso de la Matrícula:</label>
+                <select [ngModel]="reqCourseId()" (ngModelChange)="reqCourseId.set($event)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.78rem; outline: none; cursor: pointer;">
+                  <option value="">Selecciona una asignatura...</option>
+                  <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre_curso }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Cantidad de alumnos solicitantes:</label>
+                <input type="number" [ngModel]="reqStudentCount()" (ngModelChange)="reqStudentCount.set($event)" min="1" max="100" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-size: 0.78rem; outline: none;">
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.72rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Archivo Word de la Solicitud (.doc / .docx):</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <button type="button" (click)="wordFileInput.click()" class="btn-secondary" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 6px;">📂 Subir Documento</button>
+                  <span style="font-size: 0.7rem; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">
+                    {{ reqFileName() || 'Ningún archivo seleccionado' }}
+                  </span>
+                </div>
+                <input type="file" #wordFileInput (change)="onReqFileChange($event)" accept=".doc,.docx" style="display: none;">
+              </div>
+
+              <!-- Notice and Sanciones Warning -->
+              <div style="padding: 10px; background: rgba(234,88,12,0.03); border: 1px solid rgba(234,88,12,0.15); border-radius: 6px; font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
+                <span style="font-weight: 700; color: var(--unfv-gold-primary);">⚠️ Reglamento e Inconducta:</span>
+                En caso de no respetar o afectar la tutoría a la que se uniera, si hay disponibilidad, será sancionado no pudiendo solicitar tutorías ni ingresar a otras generadas.
+              </div>
+
+              <div style="display: flex; align-items: flex-start; gap: 8px; margin-top: 4px;">
+                <input type="checkbox" id="acceptNoticeCheckbox" [ngModel]="reqAcceptNotice()" (ngModelChange)="reqAcceptNotice.set($event)" style="margin-top: 2px; cursor: pointer;">
+                <label for="acceptNoticeCheckbox" style="font-size: 0.7rem; color: var(--text-primary); cursor: pointer; user-select: none;">
+                  Declaro que he leído el reglamento y acepto las condiciones de conducta y sanciones del portal.
+                </label>
+              </div>
+
+              <button (click)="submitTutoringRequest()" [disabled]="isStudentSancionado() || !reqAcceptNotice() || !reqCourseId() || !reqFile()" class="btn-primary" style="width: 100%; font-size: 0.8rem; padding: 10px; margin-top: 8px; box-shadow: none;">
+                📥 Enviar Solicitud Grupal
+              </button>
+            </div>
+          </div>
+
+          <!-- Column 2: Student Requests list & Group Sessions to Join -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            
+            <!-- List: Mis Solicitudes -->
+            <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+              <h3 style="font-size: 1.05rem; font-weight: 700;" class="gold-text-gradient">Mis Solicitudes Enviadas</h3>
+              
+              <div *ngIf="completarStudentSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem; margin-bottom: 10px;">✓ {{ completarStudentSuccess() }}</div>
+              <div *ngIf="completarStudentError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem; margin-bottom: 10px;">✗ {{ completarStudentError() }}</div>
+              
+              <div *ngIf="studentTutoringRequests().length === 0" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.75rem; border: 1px dashed var(--border-glass); border-radius: 8px;">
+                Aún no has registrado ninguna solicitud de tutoría.
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <div *ngFor="let r of studentTutoringRequests()" class="glass-card" style="padding: 12px; background: rgba(255,255,255,0.01); border-color: var(--border-glass); display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <strong style="font-size: 0.78rem; color: var(--text-primary);">Tutoría de {{ r.nombre_curso }}</strong>
+                    <span [style.background]="r.estado === 'Aprobado' ? 'rgba(16,185,129,0.1)' : r.estado === 'Rechazado' ? 'rgba(239,68,68,0.1)' : r.estado === 'Cancelación Solicitada' ? 'rgba(234,88,12,0.1)' : r.estado === 'Cancelado' ? 'rgba(100,116,139,0.1)' : 'rgba(212,175,55,0.1)'"
+                          [style.color]="r.estado === 'Aprobado' ? '#10b981' : r.estado === 'Rechazado' ? '#f87171' : r.estado === 'Cancelación Solicitada' ? '#f97316' : r.estado === 'Cancelado' ? '#64748b' : '#d4af37'"
+                          style="font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+                      {{ r.estado }}
+                    </span>
+                  </div>
+
+                  <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    <span>Participantes: {{ r.cantidad_estudiantes }} alumnos.</span>
+                    <span *ngIf="r.alumnos_unidos?.length > 0"> (+{{ r.alumnos_unidos.length }} unidos)</span>
+                  </div>
+
+                  <!-- Details depending on status -->
+                  <div *ngIf="r.estado === 'Aprobado'" style="margin-top: 4px; padding: 8px; background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.2); border-radius: 6px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 0.7rem; color: var(--text-primary);">
+                      <strong>👨‍🏫 Profesor Asignado:</strong> {{ r.nombre_docente }}
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-primary);">
+                      <strong>📅 Horario:</strong> {{ r.dia }} a las {{ r.hora }} (2 horas)
+                    </div>
+                    <a *ngIf="r.link_llamada" [href]="r.link_llamada" target="_blank" class="btn-primary" style="text-align: center; text-decoration: none; font-size: 0.65rem; padding: 6px 12px; margin-top: 6px; box-shadow: none; display: inline-block; width: fit-content;">
+                      🔗 Unirse a la Video Llamada
+                    </a>
+                  </div>
+
+                  <div *ngIf="r.estado === 'Rechazado' && r.motivo_rechazo" style="margin-top: 4px; padding: 8px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.2); border-radius: 6px; font-size: 0.7rem; color: #f87171;">
+                    <strong>Motivo del rechazo:</strong> {{ r.motivo_rechazo }}
+                  </div>
+
+                  <div *ngIf="r.estado === 'Cancelación Solicitada' && r.motivo_cancelacion_docente" style="margin-top: 4px; padding: 8px; background: rgba(234,88,12,0.04); border: 1px solid rgba(234,88,12,0.2); border-radius: 6px; font-size: 0.7rem; color: var(--text-secondary);">
+                    <strong>Cancelación del Docente en trámite:</strong> {{ r.motivo_cancelacion_docente }}
+                  </div>
+
+                  <div *ngIf="r.estado === 'Cancelado'" style="margin-top: 4px; padding: 8px; background: rgba(100,116,139,0.04); border: 1px solid rgba(100,116,139,0.2); border-radius: 6px; font-size: 0.7rem; color: var(--text-secondary); font-style: italic;">
+                    <span *ngIf="r.motivo_cancelacion_docente; else studentCancelled">Esta sesión fue cancelada por justificación del docente.</span>
+                    <ng-template #studentCancelled>Esta tutoría fue cancelada.</ng-template>
+                  </div>
+
+                  <!-- Actions based on puede_completar -->
+                  <div style="text-align: right; margin-top: 8px;">
+                    <!-- Aprobado/Confirmado and can complete -->
+                    <ng-container *ngIf="(r.estado === 'Aprobado' || r.estado === 'Confirmado') && r.puede_completar">
+                      <button (click)="completeRequest(r.id_solicitud)" class="btn-primary" style="font-size: 0.65rem; padding: 6px 12px; box-shadow: none; background: linear-gradient(135deg, #059669, #10b981); display: inline-block;">
+                        ✔️ Completada
+                      </button>
+                      <button (click)="openReportStudentModal(r)" class="btn-secondary" style="font-size: 0.65rem; padding: 6px 12px; border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.05); margin-left: 6px; display: inline-block;">
+                        📋 Reportar
+                      </button>
+                    </ng-container>
+
+                    <!-- Aprobado/Confirmado/Pendiente and cannot complete yet -> show Cancel -->
+                    <ng-container *ngIf="(r.estado === 'Pendiente' || r.estado === 'Aprobado' || r.estado === 'Confirmado') && !r.puede_completar">
+                      <button (click)="cancelTutoringRequest(r.id_solicitud)" style="font-size: 0.65rem; padding: 4px 8px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; border-radius: 6px; cursor: pointer;">
+                        🚫 Cancelar Tutoría
+                      </button>
+                    </ng-container>
+
+                    <!-- Completado -> show Report option only -->
+                    <ng-container *ngIf="r.estado === 'Completado'">
+                      <button (click)="openReportStudentModal(r)" class="btn-secondary" style="font-size: 0.65rem; padding: 6px 12px; border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.05); display: inline-block;">
+                        📋 Reportar Incidente
+                      </button>
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- List: Tutorías a las que se puede unir -->
+            <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+              <h3 style="font-size: 1.05rem; font-weight: 700;" class="gold-text-gradient">Tutorías de la Facultad</h3>
+              <p style="font-size: 0.68rem; color: var(--text-secondary); margin: 0;">Sesiones aprobadas creadas por tus compañeros de facultad a las que puedes adherirte.</p>
+
+              <div *ngIf="joinSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem;">
+                ✓ {{ joinSuccess() }}
+              </div>
+              <div *ngIf="joinError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem;">
+                ⚠️ {{ joinError() }}
+              </div>
+
+              <div *ngIf="studentGroupTutorings().length === 0" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.75rem; border: 1px dashed var(--border-glass); border-radius: 8px;">
+                No hay tutorías programadas por otros estudiantes en tu facultad y asignaturas en este momento.
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <div *ngFor="let tg of studentGroupTutorings()" class="glass-card" style="padding: 12px; background: rgba(255,255,255,0.01); border-color: var(--border-glass); display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <strong style="font-size: 0.78rem; color: var(--text-primary);">{{ tg.nombre_curso }}</strong>
+                    <span style="font-size: 0.65rem; color: var(--text-secondary);">Creador: {{ tg.nombre_creador }}</span>
+                  </div>
+
+                  <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    <span>Docente: {{ tg.nombre_docente }}</span> • <span>Horario: {{ tg.dia }} ({{ tg.hora }})</span>
+                  </div>
+                  
+                  <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    Participantes: {{ tg.cantidad_estudiantes }} alumnos
+                    <span *ngIf="tg.alumnos_unidos?.length > 0"> (+{{ tg.alumnos_unidos.length }} unidos)</span>
+                  </div>
+
+                  <div style="border-top: 1px dashed var(--border-glass); padding-top: 6px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; align-items: flex-start; gap: 6px;">
+                      <input type="checkbox" id="joinNoticeCheckbox_{{tg.id_solicitud}}" [ngModel]="joinAcceptNotice()" (ngModelChange)="joinAcceptNotice.set($event)" style="margin-top: 2px; cursor: pointer;">
+                      <label for="joinNoticeCheckbox_{{tg.id_solicitud}}" style="font-size: 0.65rem; color: var(--text-primary); cursor: pointer; user-select: none;">
+                        Acepto los términos de conducta y sanciones del reglamento.
+                      </label>
+                    </div>
+
+                    <button (click)="joinTutoringSession(tg.id_solicitud)" [disabled]="isStudentSancionado() || !joinAcceptNotice()" class="btn-primary" style="font-size: 0.7rem; padding: 6px 12px; box-shadow: none; width: fit-content; align-self: flex-end;">
+                      ➕ Unirse a Tutoría
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- List: Tutorías Grupales a las que YA SE UNIÓ -->
+            <div *ngIf="studentUniones().length > 0" class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+              <h3 style="font-size: 1.05rem; font-weight: 700;" class="gold-text-gradient">Tutorías a las que me he unido</h3>
+              
+              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                <div *ngFor="let u of studentUniones()" class="glass-card" style="padding: 10px; background: rgba(255,255,255,0.005); border-color: var(--border-glass); font-size: 0.72rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <strong>{{ u.nombre_curso }}</strong>
+                    <span [style.background]="u.estado === 'Aprobado' ? 'rgba(16,185,129,0.1)' : 'rgba(100,116,139,0.1)'"
+                          [style.color]="u.estado === 'Aprobado' ? '#10b981' : '#64748b'"
+                          style="font-size: 0.6rem; font-weight: 700; padding: 1px 4px; border-radius: 3px; text-transform: uppercase;">
+                      {{ u.estado }}
+                    </span>
+                  </div>
+                  <div style="color: var(--text-secondary);">Organizador: {{ u.nombre_creador }}</div>
+                  <div style="color: var(--text-secondary);">Docente: {{ u.nombre_docente }} | {{ u.dia }} a las {{ u.hora }}</div>
+                  <a *ngIf="u.estado === 'Aprobado' && u.link_llamada" [href]="u.link_llamada" target="_blank" class="btn-secondary" style="display: inline-block; font-size: 0.62rem; padding: 4px 8px; border-radius: 4px; margin-top: 4px; text-decoration: none; text-align: center;">
+                    🔗 Ir a la Reunión
+                  </a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- REPORT INCIDENT MODAL (STUDENT) -->
+        <div *ngIf="reporteAlumnoModal() as rSession" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="width: 100%; max-width: 520px; background: #ffffff; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid var(--border-glass); overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); cursor: default;">📋 Reportar Incidente de Tutoría</h3>
+              <button (click)="reporteAlumnoModal.set(null)" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary);">×</button>
+            </div>
+
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <span style="font-size: 0.7rem; color: var(--unfv-gold-primary); font-weight: bold; text-transform: uppercase;">Sesión:</span>
+                <h4 style="margin: 2px 0 0 0; font-size: 0.85rem; font-weight: 800; color: var(--text-primary);">Tutoría de {{ rSession.nombre_curso }}</h4>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Tipo de Incidente:</label>
+                <select [ngModel]="reportStudentTipo()" (ngModelChange)="reportStudentTipo.set($event)" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; outline: none;">
+                  <option value="">Selecciona el tipo de incidente...</option>
+                  <option value="No entendí nada del tema tratado">No entendí nada del tema tratado</option>
+                  <option value="El profesor no explicó con claridad">El profesor no explicó con claridad</option>
+                  <option value="El profesor no respondió mis preguntas o dudas">El profesor no respondió mis preguntas o dudas</option>
+                  <option value="El profesor no se presentó / llegó muy tarde">El profesor no se presentó / llegó muy tarde</option>
+                  <option value="Problemas técnicos durante la sesión virtual">Problemas técnicos durante la sesión virtual</option>
+                  <option value="El horario no fue el acordado">El horario no fue el acordado</option>
+                  <option value="La sesión fue muy corta / no cubrió el tema">La sesión fue muy corta / no cubrió el tema</option>
+                  <option value="Otros">Otros (describir abajo)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Descripción adicional (opcional):</label>
+                <textarea [ngModel]="reportStudentDescripcion()" (ngModelChange)="reportStudentDescripcion.set($event)" rows="3" placeholder="Describe el incidente con más detalle..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.8rem; outline: none; font-family: var(--font-body);"></textarea>
+              </div>
+
+              <div *ngIf="reportStudentSuccess()" style="padding: 8px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #34d399; font-size: 0.75rem;">✓ {{ reportStudentSuccess() }}</div>
+              <div *ngIf="reportStudentError()" style="padding: 8px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #f87171; font-size: 0.75rem;">✗ {{ reportStudentError() }}</div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+                <button (click)="reporteAlumnoModal.set(null)" class="btn-secondary" style="font-size: 0.75rem; padding: 6px 12px;">Cancelar</button>
+                <button (click)="submitStudentReport()" [disabled]="!reportStudentTipo()" class="btn-primary" style="font-size: 0.75rem; padding: 6px 12px; box-shadow: none;">Enviar Reporte</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- TAB 5: WELLBEING & OBU -->
+      <section *ngIf="activeTab() === 'wellbeing'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 20px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Acompañamiento Psicopedagógico (OBU)</h2>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Área de soporte psicológico y burnout académico.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            
+            <!-- Chat sentiment monitor -->
+            <div>
+              <h4 style="font-size: 0.85rem; color: var(--unfv-gold-primary); margin-bottom: 6px;">💬 Chat Empático de Desahogo</h4>
+              <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                <input type="text" [ngModel]="wellbeingQuery()" (ngModelChange)="wellbeingQuery.set($event)" placeholder="Escribe cómo te sientes hoy..." style="flex: 1; background: #ffffff; border: 1px solid var(--border-glass); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                <button (click)="checkStressSentiment()" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px; box-shadow: none;">Enviar</button>
+              </div>
+
+              <div *ngIf="wellbeingFeedback() as fb" class="glass-card" [style.background]="fb.nivel_estres === 'alto' ? 'rgba(239,68,68,0.05)' : 'rgba(16,185,129,0.05)'" style="padding: 10px; font-size: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong>Estrés: {{ fb.nivel_estres | uppercase }}</strong>
+                </div>
+                <p style="margin: 0; line-height: 1.4;">{{ fb.consejo_empatico }}</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- OBU Details -->
+          <div *ngIf="tutorService.obuInfo() as obu" class="glass-card" style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.01); font-size: 0.75rem;">
+            <strong>{{ obu.oficina_central }}</strong> • {{ obu.servicio }}<br>
+            📞 Central: {{ obu.canales_atencion_mvp.telefono_central }} | ✉ Correo: {{ obu.canales_atencion_mvp.correo_soporte }}<br>
+            <em style="color: var(--unfv-gold-primary); display: block; margin-top: 6px;">"{{ obu.canales_atencion_mvp.mensaje_empatia_ia }}"</em>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: PROFILE -->
+      <section *ngIf="activeTab() === 'profile'" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 30px; max-width: 600px; margin: 0 auto; width: 100%;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px;" class="gold-text-gradient">Mi Perfil Institucional</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px;">Administra tu información y preferencias de acceso.</p>
+          
+          <div style="display: flex; gap: 24px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;">
+            <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; overflow: hidden; cursor: pointer; border: 3px solid var(--unfv-gold-primary); background: #f8fafc;"
+                 (click)="photoInput.click()" class="profile-photo-container">
+              <img [src]="profilePhotoBase64() || user.foto_perfil || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;">
+              <div class="profile-photo-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease-in-out; color: #ffffff; font-size: 0.7rem; font-weight: bold; text-align: center; padding: 5px;">
+                Cambiar Foto
+              </div>
+            </div>
+            <input type="file" #photoInput (change)="onProfilePhotoChange($event)" accept="image/*" style="display: none;">
+
+            <div style="flex: 1; min-width: 200px;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; color: var(--text-primary);">{{ user.nombre }}</h3>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Rol: <span style="font-weight: 700; color: #ea580c;">{{ user.rol }}</span></p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Usuario: {{ user.username }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Correo: {{ user.email }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Sede: {{ user.sede }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Facultad: {{ user.facultad }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Escuela: {{ user.escuela }}</p>
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Ciclo Actual: <span style="font-weight: 700; color: var(--unfv-gold-primary);">{{ user.ciclo }}° Ciclo</span></p>
+            </div>
+          </div>
+
+          <form (submit)="onUpdateProfile($event)" style="display: flex; flex-direction: column; gap: 20px;">
+
+            <div style="border-top: 1px solid var(--border-default); padding-top: 16px;">
+              <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Modificar Contraseña</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileNewPassword() ? 'text' : 'password'" [ngModel]="profileNewPassword()" (ngModelChange)="profileNewPassword.set($event)" name="profNewPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileNewPassword.set(!showProfileNewPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Confirmar Contraseña:</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input [type]="showProfileConfirmPassword() ? 'text' : 'password'" [ngModel]="profileConfirmPassword()" (ngModelChange)="profileConfirmPassword.set($event)" name="profConfPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;">
+                    <button type="button" (click)="showProfileConfirmPassword.set(!showProfileConfirmPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+                      <svg *ngIf="!showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                      <svg *ngIf="showProfileConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="profileSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+              ✓ {{ profileSuccess() }}
+            </div>
+            <div *ngIf="profileError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+              ✗ {{ profileError() }}
+            </div>
+
+            <div style="text-align: right; margin-top: 10px;">
+              <button type="submit" class="btn-primary" style="padding: 10px 20px; font-size: 0.8rem;">Guardar Cambios</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="margin-top: auto; padding: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary); border-top: 1px solid var(--border-default);">
+    <p>© 2026 Universidad Nacional Federico Villarreal. Extensión RBAC & Panel Administrativo de Control.</p>
+  </footer>
+
+  <!-- GLOBAL FLOATING AI HELPER (visible in course workspace) -->
+  <div *ngIf="tutorService.activeCourse()" style="position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; font-family: var(--font-body);">
+    
+    <!-- Contextual Tooltip (TutorTooltip) -->
+    <div id="TutorTooltip" *ngIf="showTutorTooltip()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1.5px solid var(--unfv-gold-primary); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.12); position: relative; display: flex; flex-direction: column; gap: 4px;">
+      <button (click)="showTutorTooltip.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
+      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-gold-primary); text-transform: uppercase; letter-spacing: 0.3px;">✨ Mensaje del Tutor IA:</div>
+      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ tutorTooltipMessage() }}</div>
+      <!-- Clickable options -->
+      <div *ngIf="tutorTooltipOptions().length > 0" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; width: 100%;">
+        <button *ngFor="let opt of tutorTooltipOptions()"
+                (click)="respondToTutorTooltip(opt)"
+                class="btn-primary"
+                style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+          {{ opt }}
+        </button>
+      </div>
+    </div>
+    
+    <!-- speech bubble -->
+    <div *ngIf="showFloatingBubble() && !isFloatingChatOpen()" class="glass-card" style="background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(0, 45, 98, 0.15); padding: 10px 14px; border-radius: 12px; max-width: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; gap: 4px;">
+      <button (click)="showFloatingBubble.set(false)" style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; padding: 0;">✕</button>
+      <div style="font-size: 0.58rem; font-weight: 800; color: var(--unfv-blue-primary); text-transform: uppercase; letter-spacing: 0.3px;">💡 Sugerencia del Tutor IA:</div>
+      <div style="font-size: 0.68rem; color: var(--text-primary); line-height: 1.3;">{{ floatingAiMessage() }}</div>
+    </div>
+
+    <!-- button -->
+    <button (click)="isFloatingChatOpen.set(!isFloatingChatOpen()); showFloatingBubble.set(false);" 
+            [style.background]="isFloatingChatOpen() ? '#ef4444' : 'var(--unfv-blue-primary)'"
+            style="width: 52px; height: 52px; border-radius: 50%; border: none; color: #ffffff; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 45, 98, 0.3); transition: all 0.2s;"
+            title="Tutor de Inteligencia Artificial">
+      {{ isFloatingChatOpen() ? '✕' : '🧠' }}
+    </button>
+
+    <!-- Floating Chat Window overlaying the page -->
+    <div *ngIf="isFloatingChatOpen()" 
+         style="width: 340px; height: 480px; border-radius: 16px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid var(--border-glass); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px;">
+      <!-- Header -->
+      <div style="padding: 12px 16px; background: var(--unfv-blue-primary); color: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+        <h4 style="margin: 0; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">🧠 Tutor IA UNFV (Canal Único)</h4>
+        <button (click)="isFloatingChatOpen.set(false)" style="background: transparent; border: none; color: #ffffff; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0;">✕</button>
+      </div>
+      
+      <!-- Chat body & input -->
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding: 12px; min-height: 0;">
+        
+        <!-- Chat Logs list -->
+        <div id="chatMessagesContainerFloating" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; min-height: 0;">
+          <!-- Welcoming text -->
+          <div style="padding: 10px 12px; border-radius: 8px; background: rgba(0, 45, 98, 0.02); border: 1px dashed rgba(0, 45, 98, 0.1); font-size: 0.68rem; color: var(--text-secondary); line-height: 1.4;">
+            ¡Hola! Soy tu <strong>Tutor IA</strong>. Haz tus consultas sobre la <strong>Semana {{ selectedWeek() }}</strong>.
+          </div>
+          
+          <!-- History loop -->
+          <div *ngFor="let msg of chatHistory()" 
+               [style.align-self]="msg.sender === 'user' ? 'flex-end' : 'flex-start'"
+               [style.background]="msg.sender === 'user' ? 'var(--unfv-blue-primary)' : '#f1f5f9'"
+               [style.color]="msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)'"
+               [style.border-bottom-right-radius]="msg.sender === 'user' ? '2px' : '12px'"
+               [style.border-bottom-left-radius]="msg.sender === 'user' ? '12px' : '2px'"
+               style="max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 0.7rem; line-height: 1.3; white-space: pre-line; box-shadow: 0 1px 2px rgba(0,0,0,0.01);">
+            {{ msg.text }}
+            
+            <!-- Contextual interactive options inside floating chat bubble -->
+            <div *ngIf="msg.options && msg.options.length > 0" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; width: 100%;">
+              <button *ngFor="let opt of msg.options"
+                      (click)="respondToTutorTooltip(opt)"
+                      class="btn-primary"
+                      style="font-size: 0.62rem; padding: 5px 8px; box-shadow: none; border-radius: 6px; flex: 1; text-align: center; background: var(--unfv-gold-primary); color: #ffffff; border: none; cursor: pointer; font-weight: 700;">
+                {{ opt }}
+              </button>
+            </div>
+            
+            <!-- Recommended books inside AI chat bubble -->
+            <div *ngIf="msg.books && msg.books.length > 0" style="margin-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 0.58rem; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.3px;">
+                📖 Libros en tu Facultad:
+              </div>
+              
+              <div *ngFor="let bk of msg.books" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; display: flex; gap: 6px; color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="bk.titulo">
+                    {{ bk.titulo }}
+                  </div>
+                  <div style="font-size: 0.58rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ bk.autor }}
+                  </div>
+                  <div style="font-size: 0.58rem; color: #b45309; font-weight: 800; background: #fef3c7; padding: 1px 4px; border-radius: 3px; align-self: flex-start; display: inline-block; margin-top: 2px;">
+                    Signatura: {{ bk.signatura }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Typing loader -->
+          <div *ngIf="chatLoading()" style="align-self: flex-start; background: #f1f5f9; color: var(--text-secondary); padding: 8px 12px; border-radius: 10px; border-bottom-left-radius: 2px; font-size: 0.7rem; display: flex; align-items: center; gap: 6px;">
+            <span class="loading-dots">El Tutor IA está pensando</span>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div style="display: flex; gap: 6px; border-top: 1px solid var(--border-default); padding-top: 8px; flex-shrink: 0;">
+          <input type="text" 
+                 [(ngModel)]="chatMessage" 
+                 (keydown.enter)="sendChatMessage()"
+                 [disabled]="chatLoading()"
+                 placeholder="Escribe tu consulta académica..."
+                 style="flex: 1; font-family: var(--font-body); font-size: 0.72rem; padding: 8px 12px; border: 1px solid var(--border-glass); border-radius: 8px; outline: none; background: #f8fafc; color: var(--text-primary);">
+          <button (click)="sendChatMessage()" 
+                  [disabled]="chatLoading() || !chatMessage().trim()"
+                  class="btn-primary" 
+                  style="font-size: 0.7rem; padding: 0 12px; border-radius: 8px; box-shadow: none;">
+            Enviar
+          </button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+</div>

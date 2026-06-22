@@ -1,0 +1,247 @@
+<div class="login-bg-container">
+  <div class="login-bg-image"></div>
+  <div class="login-overlay"></div>
+  <div class="login-content">
+
+    <!-- LOGIN VIEW -->
+    <div *ngIf="authMode() === 'login'" class="glass-card" style="width: 100%; max-width: 440px; padding: 40px 30px; text-align: center; border-color: rgba(234,88,12,0.15); background: #ffffff;">
+      <!-- UNFV Logo -->
+      <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 70px; object-fit: contain; margin-bottom: 25px;">
+      
+      <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; color: #0f172a;" class="gold-text-gradient">Acceso Institucional UNFV</h2>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 30px;">Tutor Inteligente & Retención de Alumnos</p>
+
+      <form (submit)="onLogin($event)" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Usuario o Correo Institucional:</label>
+          <input type="text" [ngModel]="loginEmail()" (ngModelChange)="loginEmail.set($event)" name="email" placeholder="usuario@unfv.edu.pe" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Contraseña de Acceso:</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input [type]="showLoginPassword() ? 'text' : 'password'" [ngModel]="loginPassword()" (ngModelChange)="loginPassword.set($event)" name="password" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 46px 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+            <button type="button" (click)="showLoginPassword.set(!showLoginPassword())" style="position: absolute; right: 12px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+              <svg *ngIf="!showLoginPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <svg *ngIf="showLoginPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="loginError()" style="padding: 10px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ loginError() }}
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px; padding: 14px;">
+          Ingresar al Portal
+        </button>
+      </form>
+      
+      <!-- Signup and Recovery Links -->
+      <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-default); display: flex; justify-content: space-between; font-size: 0.8rem;">
+        <a href="javascript:void(0)" (click)="authMode.set('signup'); signupError.set(''); signupSuccess.set('');" style="color: #ea580c; text-decoration: none; font-weight: 600;">Registrar una cuenta</a>
+        <a href="javascript:void(0)" (click)="authMode.set('recovery'); recoveryStep.set(1); recoveryError.set(''); recoverySuccess.set('');" style="color: var(--text-secondary); text-decoration: none;">¿Olvidó su contraseña?</a>
+      </div>
+    </div>
+
+    <!-- SIGNUP VIEW -->
+    <div *ngIf="authMode() === 'signup'" class="glass-card" style="width: 100%; max-width: 500px; padding: 40px 30px; border-color: rgba(234,88,12,0.15); background: #ffffff;">
+      <!-- UNFV Logo -->
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 60px; object-fit: contain;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-top: 10px; margin-bottom: 4px;" class="gold-text-gradient">Registro Institucional</h2>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Crea tu cuenta de Estudiante UNFV</p>
+      </div>
+
+      <form (submit)="onSignup($event)" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Nombres y Apellidos Separados -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Nombres:</label>
+            <input type="text" [ngModel]="signupNombres()" (ngModelChange)="signupNombres.set($event)" name="signupNombres" placeholder="Ej: Juan" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Apellidos:</label>
+            <input type="text" [ngModel]="signupApellidos()" (ngModelChange)="signupApellidos.set($event)" name="signupApellidos" placeholder="Ej: Perez Gomez" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Código de Alumno (10 dígitos):</label>
+          <input type="text" [ngModel]="signupIdAlumno()" (ngModelChange)="signupIdAlumno.set($event)" name="signupIdAlumno" placeholder="Ej: 2024023989" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Correo Institucional:</label>
+          <input type="email" [ngModel]="signupEmail()" (ngModelChange)="signupEmail.set($event)" name="signupEmail" placeholder="2024023989&#64;unfv.edu.pe" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Sede:</label>
+            <select [ngModel]="signupSede()" (change)="onSignupSedeChange($event)" name="signupSede" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+              <option value="" disabled selected>Seleccionar Sede</option>
+              <option *ngFor="let s of sedesList" [value]="s.codigo">Sede {{ s.codigo }} - {{ s.direccion }}</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Facultad:</label>
+            <select [ngModel]="signupFacultad()" (change)="onSignupFacultadChange($event)" [disabled]="!signupSede()" name="signupFacultad" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+              <option value="" disabled selected>Seleccionar Facultad</option>
+              <option *ngFor="let f of signupFacultades()" [value]="f.nombre">{{ f.nombre }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Escuela Profesional:</label>
+          <select [ngModel]="signupEscuela()" (ngModelChange)="signupEscuela.set($event)" [disabled]="!signupFacultad()" name="signupEscuela" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+            <option value="" disabled selected>Seleccionar Escuela</option>
+            <option *ngFor="let e of signupEscuelas()" [value]="e">{{ e }}</option>
+          </select>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);">Contraseña:</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input [type]="showSignupPassword() ? 'text' : 'password'" [ngModel]="signupPassword()" (ngModelChange)="signupPassword.set($event)" name="signupPassword" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 42px 10px 10px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+            <button type="button" (click)="showSignupPassword.set(!showSignupPassword())" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+              <svg *ngIf="!showSignupPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <svg *ngIf="showSignupPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="signupError()" style="padding: 8px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 6px; color: #dc2626; font-size: 0.75rem; text-align: center;">
+          ✗ {{ signupError() }}
+        </div>
+        <div *ngIf="signupSuccess()" style="padding: 8px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); border-radius: 6px; color: #059669; font-size: 0.75rem; text-align: center;">
+          ✓ {{ signupSuccess() }}
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 6px; padding: 12px; font-size: 0.90rem;">
+          Registrar Cuenta
+        </button>
+      </form>
+
+      <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-default); text-align: center; font-size: 0.8rem;">
+        ¿Ya tiene una cuenta? <a href="javascript:void(0)" (click)="authMode.set('login')" style="color: #ea580c; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
+      </div>
+    </div>
+
+    <!-- PASSWORD RECOVERY VIEW -->
+    <div *ngIf="authMode() === 'recovery'" class="glass-card" style="width: 100%; max-width: 440px; padding: 40px 30px; border-color: rgba(234,88,12,0.15); background: #ffffff;">
+      <!-- UNFV Logo -->
+      <div style="text-align: center; margin-bottom: 25px;">
+        <img src="assets/unfv_logo.png" alt="UNFV Logo" style="height: 60px; object-fit: contain;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-top: 10px; margin-bottom: 4px;" class="gold-text-gradient">Recuperar Contraseña</h2>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Recupere el acceso a su cuenta institucional</p>
+      </div>
+
+      <!-- STEP 1: REQUEST VERIFICATION CODE -->
+      <form *ngIf="recoveryStep() === 1" (submit)="onRecoveryRequest($event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Correo Institucional:</label>
+          <input type="email" [ngModel]="recoveryEmail()" (ngModelChange)="recoveryEmail.set($event)" name="recEmail" placeholder="usuario@unfv.edu.pe" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+        </div>
+
+        <div *ngIf="recoveryError()" style="padding: 10px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ recoveryError() }}
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">
+          Validar correo
+        </button>
+      </form>
+
+      <!-- STEP 2: INPUT VERIFICATION CODE -->
+      <form *ngIf="recoveryStep() === 2" (submit)="onRecoveryVerify($event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="padding: 10px; background: rgba(212,175,55,0.05); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; font-size: 0.8rem; color: #ea580c; text-align: center;">
+          Código enviado al correo. Ingresa el código recibido para continuar.
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Código de Verificación:</label>
+          <input type="text" [ngModel]="recoveryCode()" (ngModelChange)="recoveryCode.set($event)" name="recCode" placeholder="Ingresa el código" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem; text-align: center; font-weight: 700; letter-spacing: 2px;" required>
+        </div>
+
+        <div *ngIf="recoveryError()" style="padding: 10px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ recoveryError() }}
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="!recoveryCode()" style="width: 100%; padding: 12px;">
+          Restablecer contraseña
+        </button>
+      </form>
+
+      <!-- STEP 3: RESET TO NEW PASSWORD -->
+      <form *ngIf="recoveryStep() === 3" (submit)="onRecoveryReset($event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña:</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input [type]="showRecoveryNewPassword() ? 'text' : 'password'" [ngModel]="recoveryNewPassword()" (ngModelChange)="recoveryNewPassword.set($event)" name="recNewPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 46px 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+            <button type="button" (click)="showRecoveryNewPassword.set(!showRecoveryNewPassword())" style="position: absolute; right: 12px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+              <svg *ngIf="!showRecoveryNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <svg *ngIf="showRecoveryNewPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Confirmar Nueva Contraseña:</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input [type]="showRecoveryConfirmPassword() ? 'text' : 'password'" [ngModel]="recoveryConfirmNewPassword()" (ngModelChange)="recoveryConfirmNewPassword.set($event)" name="recConfPass" placeholder="••••••••" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 12px 46px 12px 16px; border-radius: 10px; outline: none; font-size: 0.9rem;" required>
+            <button type="button" (click)="showRecoveryConfirmPassword.set(!showRecoveryConfirmPassword())" style="position: absolute; right: 12px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; padding: 0;">
+              <svg *ngIf="!showRecoveryConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <svg *ngIf="showRecoveryConfirmPassword()" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.391 4.178 5.328 7.178 9.966 7.178 1.488 0 2.9-.307 4.18-.865M16.24 16.24a3 3 0 1 1-4.24-4.24m8.805-3.007A10.482 10.482 0 0 0 22.066 12c-1.391-4.178-5.328-7.178-9.966-7.178-1.488 0-2.902.307-4.18.865m0 0L3 3m18 18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="recoveryError()" style="padding: 10px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ recoveryError() }}
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">
+          Restablecer contraseña
+        </button>
+      </form>
+
+      <!-- STEP 4: SUCCESS VIEW -->
+      <div *ngIf="recoveryStep() === 4" style="text-align: center; display: flex; flex-direction: column; gap: 16px;">
+        <div style="padding: 12px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); border-radius: 8px; font-size: 0.85rem; color: #059669;">
+          ✔ ¡Contraseña restablecida correctamente!
+        </div>
+        <button (click)="authMode.set('login'); recoveryStep.set(1);" class="btn-primary" style="width: 100%; padding: 12px;">
+          Iniciar Sesión
+        </button>
+      </div>
+
+      <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-default); text-align: center; font-size: 0.8rem;">
+        ¿Recordó su contraseña? <a href="javascript:void(0)" (click)="authMode.set('login')" style="color: #ea580c; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
+      </div>
+    </div>
+
+  </div>
+</div>
