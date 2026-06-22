@@ -36,6 +36,9 @@
           🌱 Soporte OBU
           <span *ngIf="tutorService.obuActive()" class="badge-alert-dot"></span>
         </button>
+        <button (click)="activeTab.set('copilot')" [class.active]="activeTab() === 'copilot'" class="nav-btn">📻 Copiloto (Viajes)</button>
+        <button (click)="activeTab.set('routes')" [class.active]="activeTab() === 'routes'" class="nav-btn">📅 Ruta de Estudio</button>
+        <button (click)="activeTab.set('cells')" [class.active]="activeTab() === 'cells'" class="nav-btn">👥 Células de Estudio</button>
         <button (click)="activeTab.set('profile')" [class.active]="activeTab() === 'profile'" class="nav-btn">👤 Mi Perfil</button>
         
         <div style="border-top: 1px solid var(--border-default); margin: 6px 0; padding-top: 6px;">
@@ -622,30 +625,45 @@
       <!-- TAB 3: QUIZ EVALUATOR -->
       <section *ngIf="activeTab() === 'evaluator'" style="display: flex; flex-direction: column; gap: 16px;">
         <div class="glass-card" style="padding: 20px;">
-          <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;" class="gold-text-gradient">Evaluador Chrono-Filtro</h2>
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Practica temas hasta la semana anterior. Las debilidades se priorizan.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-glass); padding-bottom: 8px;">
+            <div>
+              <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0;" class="gold-text-gradient">Evaluador Chrono-Filtro (Anti-Ansiedad)</h2>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0 0;">Evaluaciones formativas controladas con soporte emocional activo.</p>
+            </div>
+            <button *ngIf="activeQuiz()" (click)="toggleTimerVisibility()" class="btn-secondary" style="font-size: 0.7rem; padding: 5px 12px; border-radius: 6px; box-shadow: none;">
+              {{ hideQuizTimer() ? '👁️ Mostrar Reloj' : '🙈 Ocultar Reloj' }}
+            </button>
+          </div>
 
           <div style="display: grid; grid-template-columns: 1fr 240px; gap: 16px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
             
             <!-- Active Quiz -->
             <div>
-              <div *ngIf="!activeQuiz() && !quizLoading()" style="text-align: center; padding: 30px; border: 1px dashed var(--border-glass); border-radius: 8px;">
+              <div *ngIf="!activeQuiz() && !quizLoading()" style="text-align: center; padding: 40px; border: 2px dashed var(--border-glass); border-radius: 12px; background: rgba(0,0,0,0.015);">
+                <span style="font-size: 2rem; display: block; margin-bottom: 8px;">📝</span>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+                  Practica con preguntas basadas estrictamente en las semanas cursadas del sílabo.
+                </p>
                 <button (click)="startQuiz()" class="btn-primary" style="font-size: 0.8rem; padding: 10px 20px;">Generar Quiz Adaptativo</button>
               </div>
 
               <div *ngIf="quizLoading()" style="text-align: center; padding: 30px 0;">
-                <p style="font-size: 0.8rem; color: var(--text-secondary);">Generando cuestionario estructurado...</p>
+                <span class="loading-spinner" style="margin-bottom: 10px;"></span>
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Generando cuestionario estructurado con Gemini...</p>
               </div>
 
-              <div *ngIf="quizError()" style="padding: 10px; background: rgba(239,68,68,0.1); border-radius: 6px; color: #f87171; font-size: 0.75rem; margin-bottom: 12px;">
+              <div *ngIf="quizError()" style="padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #fca5a5; font-size: 0.76rem; margin-bottom: 12px;">
                 ⚠️ {{ quizError() }}
               </div>
 
               <div *ngIf="activeQuiz() as list">
                 <div *ngIf="currentQuestionIndex() < list.length">
-                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px;">Pregunta {{ currentQuestionIndex() + 1 }} de {{ list.length }}</p>
-                  <div class="glass-card" style="padding: 14px; margin-bottom: 12px; background: rgba(255,255,255,0.01);">
-                    <h4 style="font-size: 0.85rem; font-weight: 600; line-height: 1.4;">{{ list[currentQuestionIndex()].question }}</h4>
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px; display: flex; justify-content: space-between;">
+                    <span>Pregunta {{ currentQuestionIndex() + 1 }} de {{ list.length }}</span>
+                    <span *ngIf="!hideQuizTimer() && !quizSubmitted()" style="color: #fca5a5; font-weight: 700;">⏱️ Tiempo corriendo...</span>
+                  </p>
+                  <div class="glass-card" style="padding: 16px; margin-bottom: 12px; background: rgba(255,255,255,0.015); border-color: rgba(255,255,255,0.08);">
+                    <h4 style="font-size: 0.88rem; font-weight: 600; line-height: 1.4; margin: 0;">{{ list[currentQuestionIndex()].question }}</h4>
                   </div>
 
                   <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
@@ -654,38 +672,150 @@
                          [class.option-selected]="selectedOptionIndex() === idx && !quizSubmitted()"
                          [class.option-correct]="quizSubmitted() && list[currentQuestionIndex()].correct_index === idx"
                          [class.option-incorrect]="quizSubmitted() && selectedOptionIndex() === idx && list[currentQuestionIndex()].correct_index !== idx"
-                         class="quiz-option-card" style="font-size: 0.8rem; padding: 10px;">
+                         class="quiz-option-card" style="font-size: 0.8rem; padding: 12px; border-radius: 8px;">
                       <span style="font-weight: 700; color: var(--unfv-gold-primary); margin-right: 6px;">{{ ['A','B','C','D'][idx] }}.</span>
                       <span>{{ opt }}</span>
                     </div>
                   </div>
 
-                  <div *ngIf="quizSubmitted()" class="glass-card" style="padding: 10px; margin-bottom: 12px; font-size: 0.75rem; background: rgba(212,175,55,0.02);">
-                    <strong>Feedback:</strong> {{ list[currentQuestionIndex()].feedback }}
+                  <div *ngIf="quizSubmitted()" class="glass-card" style="padding: 12px; margin-bottom: 12px; font-size: 0.75rem; background: rgba(212,175,55,0.03); border-color: rgba(212,175,55,0.15);">
+                    <strong style="color: var(--unfv-gold-primary);">Feedback:</strong> {{ list[currentQuestionIndex()].feedback }}
+                  </div>
+
+                  <!-- Step-by-Step Empathetic Explanation (Sub-sección A) -->
+                  <div *ngIf="quizSubmitted() && showQuizExplanation() && activeQuizExplanation()" class="glass-card" style="padding: 16px; margin-bottom: 12px; background: rgba(0, 45, 98, 0.05); border-left: 4px solid var(--unfv-gold-primary); font-size: 0.8rem; line-height: 1.5; color: var(--text-primary);">
+                    <h4 style="font-size: 0.85rem; font-weight: 700; margin: 0 0 8px 0; color: var(--unfv-gold-primary);">📖 Explicación Paso a Paso</h4>
+                    <div style="white-space: pre-wrap; font-family: inherit;">{{ activeQuizExplanation() }}</div>
                   </div>
 
                   <div style="text-align: right;">
-                    <button *ngIf="!quizSubmitted()" (click)="submitAnswer()" [disabled]="selectedOptionIndex() === null" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Validar</button>
+                    <button *ngIf="!quizSubmitted()" (click)="submitAnswer()" [disabled]="selectedOptionIndex() === null" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Validar Respuesta</button>
                     <button *ngIf="quizSubmitted()" (click)="nextQuestion()" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Siguiente</button>
                   </div>
                 </div>
 
                 <!-- Quiz complete -->
-                <div *ngIf="currentQuestionIndex() >= list.length" style="text-align: center; padding: 20px 0;">
-                  <h4 style="font-size: 1.1rem;" class="gold-text-gradient">¡Cuestionario Completado!</h4>
-                  <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">Nota: {{ (score() / list.length * 20) | number:'2.0-0' }} / 20</p>
-                  <button (click)="activeQuiz.set(null)" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">Volver</button>
+                <div *ngIf="currentQuestionIndex() >= list.length" style="text-align: center; padding: 30px 0;">
+                  <span style="font-size: 2.5rem; display: block; margin-bottom: 10px;">🏆</span>
+                  <h4 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 8px 0;" class="gold-text-gradient">¡Cuestionario Completado!</h4>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">Nota: {{ (score() / list.length * 20) | number:'2.0-0' }} / 20</p>
+                  <button (click)="activeQuiz.set(null)" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 20px;">Volver</button>
                 </div>
               </div>
             </div>
 
             <!-- Weaknesses -->
-            <div class="glass-card" style="padding: 12px; background: rgba(239,68,68,0.01); border-color: rgba(239,68,68,0.1);">
-              <h4 style="font-size: 0.8rem; color: #fca5a5; margin-bottom: 8px;">🎯 Debilidades Activas</h4>
+            <div class="glass-card" style="padding: 12px; background: rgba(239,68,68,0.01); border-color: rgba(239,68,68,0.1); height: fit-content;">
+              <h4 style="font-size: 0.8rem; color: #fca5a5; margin-bottom: 8px; font-weight: 700; border-bottom: 1px solid rgba(239,68,68,0.1); padding-bottom: 6px;">🎯 Debilidades Activas</h4>
+              <div *ngIf="weaknesses().length === 0" style="text-align: center; padding: 10px; font-size: 0.7rem; color: var(--text-secondary);">
+                ¡No tienes debilidades registradas! Buen trabajo.
+              </div>
               <div *ngFor="let deb of weaknesses()" class="glass-card" style="padding: 8px; margin-bottom: 6px; background: rgba(239,68,68,0.03); font-size: 0.7rem; border-color: rgba(239,68,68,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                  <span style="font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 80%;" [title]="deb.tema">{{ deb.tema }}</span>
+                  <span class="badge-failed" style="font-size: 0.55rem; padding: 1px 4px; border-radius: 4px; flex-shrink: 0;">{{ deb.errores_count }} Err</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CROWDSOURCING QUESTION BANK (MÓDULO 4) -->
+        <div class="glass-card" style="padding: 20px; margin-top: 8px;">
+          <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 6px 0;" class="gold-text-gradient">📚 Banco de Preguntas Comunitario</h3>
+          <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 16px;">Comparte exámenes reales o practica con preguntas validadas por IA de otros estudiantes.</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; @media (max-width: 768px) { grid-template-columns: 1fr; }">
+            
+            <!-- Upload Form (Sección A) -->
+            <div class="glass-card" style="padding: 16px; background: rgba(255,255,255,0.01);">
+              <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Aportar Pregunta al Catálogo</h4>
+              <form (submit)="$event.preventDefault(); submitCrowdQuestion()" style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div>
+                    <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Facultad:</label>
+                    <input type="text" [ngModel]="crowdFacultad()" (ngModelChange)="crowdFacultad.set($event)" name="crowdFacultad" placeholder="Ej: FIIS" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; outline: none;" required>
+                  </div>
+                  <div>
+                    <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Código de Curso:</label>
+                    <input type="text" [ngModel]="crowdCurso()" (ngModelChange)="crowdCurso.set($event)" name="crowdCurso" placeholder="Ej: INF02" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; outline: none;" required>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Profesor (Opcional):</label>
+                  <input type="text" [ngModel]="crowdProfesor()" (ngModelChange)="crowdProfesor.set($event)" name="crowdProfesor" placeholder="Ej: Ing. Ramos" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; outline: none;">
+                </div>
+
+                <div>
+                  <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Pregunta (Texto o sube foto):</label>
+                  <textarea [ngModel]="crowdPreguntaTexto()" (ngModelChange)="crowdPreguntaTexto.set($event)" name="crowdPreguntaTexto" rows="3" placeholder="Digita el cuerpo de la pregunta..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; outline: none; resize: vertical;"></textarea>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Imagen de Soporte (OCR):</label>
+                  <div style="border: 1px dashed var(--border-glass); padding: 10px; border-radius: 6px; position: relative; text-align: center; background: rgba(0,0,0,0.01);">
+                    <input type="file" (change)="onCrowdFileSelected($event)" accept="image/*" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                      {{ crowdImagenFileName() || '📸 Subir foto de examen' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.7rem; display: block; margin-bottom: 4px;">Respuesta Correcta Propuesta:</label>
+                  <input type="text" [ngModel]="crowdRespuestaDeclarada()" (ngModelChange)="crowdRespuestaDeclarada.set($event)" name="crowdRespuestaDeclarada" placeholder="Clave correcta o solución textual..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; outline: none;" required>
+                </div>
+
+                <div *ngIf="crowdLoading()" style="text-align: center; padding: 6px; font-size: 0.75rem; color: var(--unfv-blue-primary);">
+                  ⏳ Procesando OCR y validando académicamente con IA...
+                </div>
+                <div *ngIf="crowdUploadSuccess()" style="padding: 6px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #10b981; font-size: 0.7rem;">
+                  ✓ {{ crowdUploadSuccess() }}
+                </div>
+                <div *ngIf="crowdUploadError()" style="padding: 6px; background: rgba(239,68,68,0.08); border-radius: 6px; color: #ef4444; font-size: 0.7rem;">
+                  ✗ {{ crowdUploadError() }}
+                </div>
+
+                <button type="submit" [disabled]="crowdLoading() || (!crowdPreguntaTexto() && !crowdImagenFile()) || !crowdRespuestaDeclarada()" class="btn-primary" style="font-size: 0.75rem; padding: 8px; width: 100%;">
+                  🚀 Validar y Publicar
+                </button>
+              </form>
+            </div>
+
+            <!-- Published Questions Catalog (Sección B) -->
+            <div class="glass-card" style="padding: 16px; background: rgba(255,255,255,0.01); display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto;">
+              <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; color: var(--text-primary);">Banco de Preguntas del Curso</h4>
+              
+              <div *ngIf="crowdPublishedQuestions().length === 0" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.8rem;">
+                No hay preguntas compartidas para esta asignatura. ¡Sé el primero en aportar una!
+              </div>
+
+              <div *ngFor="let q of crowdPublishedQuestions()" class="glass-card" style="padding: 12px; background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 80%;">{{ deb.tema }}</span>
-                  <span class="badge-failed" style="font-size: 0.55rem; padding: 0 4px;">{{ deb.errores_count }} Err</span>
+                  <span style="font-size: 0.65rem; background: rgba(212,175,55,0.1); color: var(--unfv-gold-primary); padding: 2px 6px; border-radius: 20px; font-weight: 700;">
+                    {{ q.nivel_dificultad }}
+                  </span>
+                  <span style="font-size: 0.65rem; color: var(--text-secondary);">
+                    Score IA: {{ q.score_confianza | number:'1.0-0' }}%
+                  </span>
+                </div>
+
+                <p style="font-size: 0.78rem; font-weight: 600; margin: 0; line-height: 1.4;">{{ q.pregunta_texto }}</p>
+                <div *ngIf="q.imagen_path" style="text-align: center; margin: 4px 0;">
+                  <img [src]="tutorService.apiBaseUrl.replace('/api', '') + '/' + q.imagen_path" alt="Soporte" style="max-height: 140px; border-radius: 6px; max-width: 100%; border: 1px solid var(--border-glass);">
+                </div>
+
+                <details style="font-size: 0.72rem; cursor: pointer; color: var(--text-secondary);">
+                  <summary style="font-weight: 700; color: var(--unfv-gold-primary); outline: none;">Ver Solución Validada por IA</summary>
+                  <div style="padding-top: 6px; border-top: 1px solid var(--border-glass); margin-top: 4px; line-height: 1.4; color: var(--text-primary);">
+                    {{ q.respuesta_correcta }}
+                  </div>
+                </details>
+                
+                <div style="font-size: 0.62rem; color: var(--text-secondary); text-align: right;">
+                  Profesor: {{ q.profesor || 'No Declarado' }} · Facultad: {{ q.facultad }}
                 </div>
               </div>
             </div>
@@ -1403,4 +1533,383 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- 6 CORE MODULES: NEW SECTION PANELS (COPILOT, ROUTES, CELLS) -->
+  <!-- ========================================================================= -->
+
+  <!-- TAB: COPILOTO DE TRAYECTOS (MODO MANOS LIBRES) -->
+  <section *ngIf="activeTab() === 'copilot'" style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- Configuración del Viaje (Pantalla de Inicio de la Función - Sección A) -->
+    <div *ngIf="!copilotActive() && !copilotReport()" class="glass-card" style="padding: 30px; max-width: 600px; margin: 0 auto; width: 100%;">
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; text-align: center;" class="gold-text-gradient">📻 Copiloto de Trayectos (Manos Libres)</h2>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin-bottom: 24px;">
+        Aprovecha tus traslados en transporte público para repasar oralmente tus materias con audífonos sin exponer tu celular.
+      </p>
+
+      <form (submit)="$event.preventDefault(); startCopilot()" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 6px;">Selecciona tu asignatura de repaso:</label>
+          <select [ngModel]="copilotCurso()" (ngModelChange)="copilotCurso.set($event)" name="copilotCurso" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+            <option value="" disabled>-- Elige un curso activo --</option>
+            <option *ngFor="let c of tutorService.activeNotebooks()" [value]="c.id_curso">{{ c.nombre_curso }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 6px;">Duración estimada del viaje (minutos):</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <button type="button" (click)="copilotTiempo.set(20)" [style.background]="copilotTiempo() === 20 ? 'var(--unfv-blue-primary)' : 'rgba(255,255,255,0.05)'" [style.color]="copilotTiempo() === 20 ? '#ffffff' : 'var(--text-primary)'" style="border: 1px solid var(--border-glass); padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">20 min</button>
+            <button type="button" (click)="copilotTiempo.set(40)" [style.background]="copilotTiempo() === 40 ? 'var(--unfv-blue-primary)' : 'rgba(255,255,255,0.05)'" [style.color]="copilotTiempo() === 40 ? '#ffffff' : 'var(--text-primary)'" style="border: 1px solid var(--border-glass); padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">40 min</button>
+            <button type="button" (click)="copilotTiempo.set(60)" [style.background]="copilotTiempo() === 60 ? 'var(--unfv-blue-primary)' : 'rgba(255,255,255,0.05)'" [style.color]="copilotTiempo() === 60 ? '#ffffff' : 'var(--text-primary)'" style="border: 1px solid var(--border-glass); padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">60+ min</button>
+          </div>
+          <input type="number" [ngModel]="copilotTiempo()" (ngModelChange)="copilotTiempo.set($event)" name="copilotCustomTime" min="5" max="180" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem; margin-top: 8px;" placeholder="Ingresar tiempo exacto (min)">
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 6px;">Modalidad de Sesión:</label>
+          <div style="display: flex; gap: 10px; background: rgba(0,0,0,0.03); padding: 6px; border-radius: 10px; border: 1px solid var(--border-glass);">
+            <button type="button" (click)="copilotModalidad.set('resumen')" [style.background]="copilotModalidad() === 'resumen' ? 'var(--unfv-blue-primary)' : 'transparent'" [style.color]="copilotModalidad() === 'resumen' ? '#ffffff' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.8rem;">🎧 Solo Escuchar Resumen</button>
+            <button type="button" (click)="copilotModalidad.set('trivia')" [style.background]="copilotModalidad() === 'trivia' ? 'var(--unfv-blue-primary)' : 'transparent'" [style.color]="copilotModalidad() === 'trivia' ? '#ffffff' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.8rem;">🗣️ Trivia de Voz Interactiva</button>
+          </div>
+        </div>
+
+        <div *ngIf="copilotLoading()" style="text-align: center; padding: 10px; color: var(--unfv-blue-primary); font-size: 0.85rem; font-weight: 700;">
+          ⏳ Gemini está estructurando tu guión personalizado...
+        </div>
+
+        <button type="submit" [disabled]="copilotLoading() || !copilotCurso()" class="btn-primary" style="font-size: 0.95rem; padding: 14px; width: 100%; font-weight: 800; box-shadow: 0 10px 25px rgba(212,175,55,0.25);">
+          🎒 Iniciar Viaje Manos Libres
+        </button>
+      </form>
+    </div>
+
+    <!-- Reproductor y Control de Voz (Modo Activo - Sección B) -->
+    <div *ngIf="copilotActive()" style="position: fixed; inset: 0; background: #0b0f19; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; font-family: var(--font-body); color: #ffffff;">
+      
+      <!-- Energy saving graphic / comm status -->
+      <div style="text-align: center; margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <div style="width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.01) 70%); display: flex; align-items: center; justify-content: center;"
+             [class.pulse-animation]="copilotPlaying() && !copilotListening()">
+          <span style="font-size: 4rem;">📻</span>
+        </div>
+        
+        <div>
+          <h3 style="margin: 0 0 6px 0; font-size: 1.3rem; font-weight: 800; color: var(--unfv-gold-primary);">
+            {{ copilotModalidad() === 'resumen' ? 'Podcast de Repaso Activo' : 'Trivia Socrática de Voz' }}
+          </h3>
+          <span style="font-size: 0.8rem; color: #a1a1aa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
+            Estudiando en Movimiento · Audífonos Conectados
+          </span>
+        </div>
+      </div>
+
+      <!-- Oral interactions transcription boxes (Sección B.2) -->
+      <div style="width: 100%; max-width: 500px; height: 120px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 45px; display: flex; flex-direction: column; justify-content: center; gap: 8px;">
+        <div *ngIf="copilotModalidad() === 'trivia'">
+          <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--unfv-gold-primary); font-weight: 800; display: block;">Escucha de Micrófono:</span>
+          <p style="font-size: 0.85rem; color: #e4e4e7; margin: 0; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ copilotAnswerTranscript() || 'Esperando tu turno de responder...' }}
+          </p>
+        </div>
+        <div *ngIf="copilotModalidad() === 'resumen'">
+          <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--unfv-gold-primary); font-weight: 800; display: block;">Sección:</span>
+          <p style="font-size: 0.85rem; color: #e4e4e7; margin: 0; font-weight: 700;">
+            {{ copilotScript()?.titulo || 'Repasando...' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Giant Accessible Controls (Sección B.1) -->
+      <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-bottom: 50px;">
+        <button (click)="skipCopilot15s('backward')" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); background: transparent; color: #ffffff; font-size: 1.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          ⏪
+        </button>
+        <button *ngIf="copilotPlaying()" (click)="stopCopilot()" style="width: 100px; height: 100px; border-radius: 50%; border: none; background: #ea580c; color: #ffffff; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 15px 35px rgba(234,88,12,0.45);">
+          ⏸️
+        </button>
+        <button *ngIf="!copilotPlaying()" (click)="resumeCopilot()" style="width: 100px; height: 100px; border-radius: 50%; border: none; background: #10b981; color: #ffffff; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 15px 35px rgba(16,185,129,0.45);">
+          ▶️
+        </button>
+        <button (click)="skipCopilot15s('forward')" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); background: transparent; color: #ffffff; font-size: 1.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          ⏩
+        </button>
+      </div>
+
+      <!-- Action Footer -->
+      <button (click)="finishCopilotTrip()" style="background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.4); color: #fca5a5; font-size: 0.9rem; font-weight: 700; padding: 14px 40px; border-radius: 12px; cursor: pointer; box-shadow: none; transition: 0.2s;">
+        🛑 Finalizar Viaje (Llegué a mi destino)
+      </button>
+    </div>
+
+    <!-- Reporte de Llegada (Post-Viaje - Sección C) -->
+    <div *ngIf="copilotReport()" class="glass-card" style="padding: 35px; max-width: 550px; margin: 0 auto; width: 100%; text-align: center;">
+      <span style="font-size: 3rem; display: block; margin-bottom: 12px;">📍</span>
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 6px 0;" class="gold-text-gradient">Reporte de Llegada</h2>
+      <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 24px;">¡Felicidades! Has culminado tu viaje de repaso adaptativo.</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">
+        <div class="glass-card" style="padding: 16px; background: rgba(0, 45, 98, 0.02);">
+          <span style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Tiempo Aprovechado:</span>
+          <span style="font-size: 1.4rem; font-weight: 800; color: var(--unfv-blue-primary);">{{ copilotReport().tiempo_aprovechado }} min</span>
+        </div>
+        <div class="glass-card" style="padding: 16px; background: rgba(0, 45, 98, 0.02);">
+          <span style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Trivia de Voz:</span>
+          <span style="font-size: 1.4rem; font-weight: 800; color: var(--unfv-blue-primary);">{{ copilotReport().respuestas_correctas }} / {{ copilotReport().preguntas_contestadas }}</span>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 16px; background: rgba(16,185,129,0.03); border-color: rgba(16,185,129,0.15); margin-bottom: 30px;">
+        <span style="font-size: 0.72rem; color: #10b981; font-weight: 700; display: block; margin-bottom: 4px;">Puntaje de Rendimiento:</span>
+        <span style="font-size: 1.8rem; font-weight: 800; color: #10b981;">{{ copilotReport().porcentaje_rendimiento }}%</span>
+      </div>
+
+      <p style="font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.4;">
+        ⚠️ Las preguntas respondidas incorrectamente se han guardado como debilidades críticas y se inyectaron automáticamente en tus Micro-Rutas de Estudio.
+      </p>
+
+      <button (click)="copilotReport.set(null)" class="btn-primary" style="font-size: 0.85rem; padding: 10px 30px;">
+        Aceptar y Volver
+      </button>
+    </div>
+
+  </section>
+
+  <!-- TAB: MICRO-RUTAS DE ESTUDIO ADAPTATIVAS (MÓDULO 2) -->
+  <section *ngIf="activeTab() === 'routes'" style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <!-- Recalculator Warning Alert (Sección C) -->
+    <div *ngIf="routeRecalculateAlert()" class="glass-card" style="padding: 14px 20px; background: rgba(234, 88, 12, 0.08); border-color: rgba(234, 88, 12, 0.3); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">⚠️</span>
+        <p style="font-size: 0.78rem; color: #ea580c; font-weight: 600; margin: 0; max-width: 500px;">
+          {{ routeRecalculateAlert() }}
+        </p>
+      </div>
+      <button (click)="recalculateStudyRoute()" class="btn-primary" style="background: #ea580c; color: #ffffff; border: none; font-size: 0.72rem; padding: 6px 12px; border-radius: 6px; box-shadow: none; font-weight: 700;">
+        🔄 Recalcular Carga con IA
+      </button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 280px 1fr; gap: 16px; @media (max-width: 992px) { grid-template-columns: 1fr; }">
+      
+      <!-- Planning Form (Sección A) -->
+      <div class="glass-card" style="padding: 20px; height: fit-content;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 6px 0;" class="gold-text-gradient">📅 Planificar Examen</h3>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 16px;">Define tu meta y Gemini construirá tu ruta diaria.</p>
+
+        <form (submit)="$event.preventDefault(); generateStudyRoute()" style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 0.7rem; display: block; margin-bottom: 4px; font-weight: 600;">Fecha de Próximo Examen:</label>
+            <input type="date" [ngModel]="routeExamenFecha()" (ngModelChange)="routeExamenFecha.set($event)" name="routeExamenFecha" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; outline: none;" required>
+          </div>
+
+          <div>
+            <label style="font-size: 0.7rem; display: block; margin-bottom: 4px; font-weight: 600;">Dificultad Autopercibida (1-5):</label>
+            <input type="range" [ngModel]="routeExamenDificultad()" (ngModelChange)="routeExamenDificultad.set($event)" name="routeExamenDificultad" min="1" max="5" step="1" style="width: 100%; accent-color: var(--unfv-gold-primary);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">
+              <span>Fácil</span>
+              <strong style="color: var(--unfv-gold-primary);">{{ routeExamenDificultad() }}/5</strong>
+              <span>Difícil</span>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size: 0.7rem; display: block; margin-bottom: 4px; font-weight: 600;">Disponibilidad Diaria (Horas):</label>
+            <input type="number" [ngModel]="routeExamenDisponibilidad()" (ngModelChange)="routeExamenDisponibilidad.set($event)" name="routeExamenDisponibilidad" min="0.5" max="12" step="0.5" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; outline: none;" required>
+          </div>
+
+          <div *ngIf="routeFormLoading()" style="text-align: center; padding: 6px; font-size: 0.75rem; color: var(--unfv-blue-primary);">
+            ⏳ Calculando y distribuyendo cargas...
+          </div>
+
+          <button type="submit" [disabled]="routeFormLoading() || !routeExamenFecha()" class="btn-primary" style="font-size: 0.75rem; padding: 10px; width: 100%;">
+            🔧 Generar Cronograma
+          </button>
+        </form>
+      </div>
+
+      <!-- Roadmap Render (Sección B) -->
+      <div class="glass-card" style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0;" class="gold-text-gradient">Cronograma de Micro-Learning</h3>
+            <span *ngIf="routeActive()" style="font-size: 0.7rem; color: var(--text-secondary);">Días restantes para el examen: {{ routeDiasRestantes() }} días</span>
+          </div>
+        </div>
+
+        <div *ngIf="!routeActive()" style="text-align: center; padding: 50px 0; border: 1px dashed var(--border-glass); border-radius: 8px;">
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">No tienes ninguna ruta activa para este curso. Genera una en el panel izquierdo.</p>
+        </div>
+
+        <!-- Task Grid (Sección B) -->
+        <div *ngIf="routeActive()" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+          <div *ngFor="let t of routeTasks()" class="glass-card" 
+               [style.background]="t.completado ? 'rgba(16,185,129,0.03)' : t.es_hoy ? 'rgba(212,175,55,0.03)' : 'rgba(255,255,255,0.01)'"
+               [style.border-color]="t.es_hoy ? 'var(--unfv-gold-primary)' : 'var(--border-glass)'"
+               style="padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+            
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700;">{{ t.fecha_asignada }}</span>
+                <span *ngIf="t.es_hoy" style="background: var(--unfv-gold-primary); color: #000000; font-size: 0.55rem; font-weight: 800; padding: 1px 6px; border-radius: 20px; text-transform: uppercase;">HOY</span>
+              </div>
+              <p style="font-size: 0.8rem; font-weight: 600; margin: 0; line-height: 1.4; color: var(--text-primary);">{{ t.meta_texto }}</p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-glass); padding-top: 8px; margin-top: 4px;">
+              <span style="font-size: 0.68rem; color: var(--text-secondary);">⏱️ {{ t.tiempo_estimado }} min</span>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; cursor: pointer; font-weight: 700; color: t.completado ? '#10b981' : 'var(--text-secondary)'">
+                <input type="checkbox" [checked]="t.completado" (change)="toggleRouteTask(t)" style="accent-color: #10b981; cursor: pointer;">
+                {{ t.completado ? 'Completado' : 'Pendiente' }}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- TAB: MATCHMAKING DE CÉLULAS DE ESTUDIO (MÓDULO 5) -->
+  <section *ngIf="activeTab() === 'cells'" style="display: flex; flex-direction: column; gap: 16px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
+      <div>
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;" class="gold-text-gradient">👥 Células de Repaso Social</h2>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0 0;">Emparejamiento inteligente de alumnos en riesgo de desánimo para estudio cooperativo.</p>
+      </div>
+      <button (click)="triggerCellMatchmaking()" class="btn-secondary" style="font-size: 0.72rem; padding: 6px 12px;">
+        🔍 Forzar Búsqueda de Célula (Demo)
+      </button>
+    </div>
+
+    <div *ngIf="cellsTriggerSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border-radius: 6px; color: #10b981; font-size: 0.75rem;">
+      ✓ {{ cellsTriggerSuccess() }}
+    </div>
+
+    <!-- Matchmaking Invitations (Sección B) -->
+    <div *ngIf="cellsInvitations().length > 0" style="display: flex; flex-direction: column; gap: 10px;">
+      <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--unfv-gold-primary);">📬 Invitaciones Recibidas</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+        <div *ngFor="let inv of cellsInvitations()" class="glass-card" style="padding: 16px; border-color: var(--unfv-gold-primary); background: rgba(212,175,55,0.02); display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--unfv-gold-primary); font-weight: 800;">Mesa de Trabajo Sugerida:</span>
+            <h4 style="font-size: 0.9rem; font-weight: 800; margin: 4px 0 2px 0; color: var(--text-primary);">{{ inv.curso_nombre }}</h4>
+            <p style="font-size: 0.8rem; margin: 0; font-weight: 600; color: #fca5a5;">Debilidad Común: {{ inv.tema_comun }}</p>
+          </div>
+
+          <div style="font-size: 0.75rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px;">
+            <strong>Integrantes detectados:</strong> {{ inv.miembros_cantidad }} alumnos.
+            <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px;">
+              <span *ngFor="let ps of inv.miembros_pseudonimos" style="font-size: 0.58rem; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px;">
+                🕵️ {{ ps }}
+              </span>
+              <span style="font-size: 0.58rem; background: rgba(212,175,55,0.1); color: var(--unfv-gold-primary); padding: 1px 6px; border-radius: 4px;">
+                Tú: {{ inv.mi_pseudonimo }}
+              </span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button (click)="acceptCell(inv.id_registro)" class="btn-primary" style="font-size: 0.72rem; padding: 6px 12px; flex: 1;">Aceptar e Integrarme</button>
+            <button (click)="rejectCell(inv.id_registro)" class="btn-secondary" style="font-size: 0.72rem; padding: 6px 12px; color: #fca5a5; border-color: rgba(239,68,68,0.25);">Rechazar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Study Cells (Sección C) -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <h3 style="font-size: 0.85rem; font-weight: 800; margin: 0; color: var(--text-primary);">👥 Mis Mesas de Estudio Activas</h3>
+      
+      <div *ngIf="cellsActive().length === 0" style="text-align: center; padding: 40px; border: 1px dashed var(--border-glass); border-radius: 8px;">
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">No estás inscrito en ninguna célula de estudio activa actualmente.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media (max-width: 992px) { grid-template-columns: 1fr; }">
+        <div *ngFor="let c of cellsActive()" class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <h4 style="font-size: 0.98rem; font-weight: 800; margin: 0;" class="gold-text-gradient">{{ c.curso_nombre }}</h4>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">Tema a Nivelar: {{ c.tema_comun }}</span>
+          </div>
+
+          <!-- Members reveal (Sección B.pseudonimos vs real names) -->
+          <div style="padding: 10px; background: rgba(255,255,255,0.01); border-radius: 8px; border: 1px solid var(--border-glass);">
+            <strong style="font-size: 0.7rem; display: block; margin-bottom: 6px; text-transform: uppercase; color: var(--text-secondary);">Miembros Revelados:</strong>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div *ngFor="let m of c.miembros" style="font-size: 0.76rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>{{ m.nombre }}</span>
+                <span [style.background]="m.aceptado ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)'" [style.color]="m.aceptado ? '#34d399' : 'var(--text-secondary)'" style="font-size: 0.58rem; padding: 1px 6px; border-radius: 4px; font-weight: 700;">
+                  {{ m.aceptado ? 'Conectado' : 'Pendiente' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coordinates / Meeting suggested spots (Sección C) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="glass-card" style="padding: 10px; font-size: 0.72rem; background: rgba(0,45,98,0.02);">
+              <strong>📍 Reunión Física:</strong>
+              <p style="margin: 4px 0 0 0; color: var(--text-primary);">{{ c.ubicacion_reunion || 'Por Coordinar' }}</p>
+            </div>
+            <div class="glass-card" style="padding: 10px; font-size: 0.72rem; background: rgba(0,45,98,0.02);">
+              <strong>💻 Sala Virtual:</strong>
+              <p style="margin: 4px 0 0 0;">
+                <a [href]="c.enlace_virtual" target="_blank" style="color: var(--unfv-gold-primary); font-weight: 700; text-decoration: none;">Entrar a Videollamada →</a>
+              </p>
+            </div>
+          </div>
+
+          <!-- AI Suggested Study topics checklist (Sección C) -->
+          <div style="padding: 12px; background: rgba(212,175,55,0.03); border: 1px solid rgba(212,175,55,0.15); border-radius: 8px;">
+            <strong style="font-size: 0.72rem; color: var(--unfv-gold-primary); display: block; margin-bottom: 6px;">📋 Temario Sugerido por IA para el Grupo:</strong>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div *ngFor="let p of c.temario_sugerido" style="font-size: 0.74rem; display: flex; align-items: center; gap: 6px; color: var(--text-primary);">
+                <span>✔️</span> <span>{{ p }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- MANDATORY DECOMPRESSION BREAK LOCK OVERLAY SCREEN (MÓDULO 3) -->
+  <!-- ========================================================================= -->
+  <div *ngIf="quizCongelar()" style="position: fixed; inset: 0; background: #0c0f1a; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; font-family: var(--font-body); text-align: center; color: #ffffff;">
+    
+    <div style="width: 100%; max-width: 550px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+      
+      <!-- Breathing animation circle (4-7-8 Exercise) -->
+      <div style="width: 160px; height: 160px; border-radius: 50%; border: 3px solid var(--unfv-gold-primary); background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.01) 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; animation: heartbeat 4s infinite ease-in-out;">
+        <span style="font-size: 0.65rem; text-transform: uppercase; color: var(--unfv-gold-primary); font-weight: 800; display: block; letter-spacing: 0.05em; margin-bottom: 4px;">Inhala / Retén / Exhala</span>
+        <span style="font-size: 1.8rem; font-weight: 900; color: #ffffff;">{{ quizBloqueoSegundosRestantes() }}s</span>
+      </div>
+
+      <div>
+        <h2 style="font-size: 1.4rem; font-weight: 900; margin: 0 0 8px 0; color: var(--unfv-gold-primary);">Pausa Obligatoria de Descompresión</h2>
+        <span *ngIf="quizBloqueoMotivo() === 'frustracion'" style="font-size: 0.8rem; background: rgba(239,68,68,0.15); color: #fca5a5; padding: 4px 12px; border-radius: 20px; font-weight: 700;">Sensor de Frustración Activado (4 errores consecutivos)</span>
+        <span *ngIf="quizBloqueoMotivo() === 'fatiga_nocturna'" style="font-size: 0.8rem; background: rgba(234,88,12,0.15); color: #fed7aa; padding: 4px 12px; border-radius: 20px; font-weight: 700;">Sensor de Fatiga Nocturna (Estudio continuo de madrugada)</span>
+      </div>
+
+      <!-- Support text (Sección C) -->
+      <p style="font-size: 0.88rem; color: #d4d4d8; line-height: 1.5; margin: 0; max-width: 460px;">
+        Estás esforzándote mucho, pero tu cerebro necesita un respiro para consolidar la información. Vamos a hacer una pausa obligatoria para cuidar tu salud mental.
+      </p>
+
+      <!-- Guidelines/Exercises audio/visual guidelines (Sección C) -->
+      <div class="glass-card" style="padding: 16px; background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); width: 100%; text-align: left; display: flex; flex-direction: column; gap: 8px;">
+        <strong style="font-size: 0.72rem; text-transform: uppercase; color: var(--unfv-gold-primary); display: block;">🧘 Ejercicio de Relajación Recomendado (Técnica 4-7-8):</strong>
+        <p style="font-size: 0.76rem; color: #a1a1aa; margin: 0; line-height: 1.4;">
+          1. Inhala aire por la nariz silenciosamente durante <strong>4 segundos</strong>.<br>
+          2. Retén la respiración durante <strong>7 segundos</strong>.<br>
+          3. Exhala el aire por completo por la boca emitiendo un silbido durante <strong>8 segundos</strong>.<br>
+          4. Repite el ciclo 4 veces. Realiza estiramientos físicos rápidos de hombros y cuello.
+        </p>
+      </div>
+    </div>
+  </div>
 </div>

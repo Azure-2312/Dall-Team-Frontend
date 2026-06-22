@@ -258,11 +258,17 @@ export class StudentDashboardComponent {
       }
     }, { allowSignalWrites: true });
 
-    // React to active tab change to tutoring to reload requests
+    // React to active tab change to tutoring, routes, cells, evaluator
     effect(() => {
       const tab = this.activeTab();
       if (tab === 'tutoring') {
         this.loadStudentTutoringRequests();
+      } else if (tab === 'routes') {
+        this.loadStudyRoute();
+      } else if (tab === 'cells') {
+        this.loadCellsDashboard();
+      } else if (tab === 'evaluator') {
+        this.loadCrowdQuestions();
       }
     }, { allowSignalWrites: true });
 
@@ -1558,6 +1564,12 @@ export class StudentDashboardComponent {
     this.selectedOptionIndex.set(null);
     this.quizSubmitted.set(false);
     this.score.set(0);
+    
+    this.quizSessionStartTime = Date.now();
+    this.questionStartTimestamp = Date.now();
+    this.quizClickTimestamps = [];
+    this.showQuizExplanation.set(false);
+    this.activeQuizExplanation.set('');
 
     this.tutorService.generateQuiz(user.profile_id, course.id_curso).subscribe({
       next: (res) => {
@@ -1575,6 +1587,7 @@ export class StudentDashboardComponent {
   selectOption(idx: number) {
     if (this.quizSubmitted()) return;
     this.selectedOptionIndex.set(idx);
+    this.logEvaluatorClick();
   }
 
   submitAnswer() {
@@ -1588,10 +1601,29 @@ export class StudentDashboardComponent {
 
     this.quizSubmitted.set(true);
     const question = quiz[currentIdx];
+    const esCorrecto = (selectedIdx === question.correct_index);
     
-    if (selectedIdx === question.correct_index) {
+    // Telemetry calculations
+    const timeTaken = Math.round((Date.now() - this.questionStartTimestamp) / 1000);
+    const sessionDurationMin = Math.round((Date.now() - this.quizSessionStartTime) / 60000);
+    
+    // Check repetitive clicks
+    const now = Date.now();
+    const recentClicks = this.quizClickTimestamps.filter(t => now - t < 2000);
+    const clicksRepetitive = recentClicks.length >= 5;
+
+    if (esCorrecto) {
       this.score.update(s => s + 1);
     } else {
+      // Load explanation step-by-step
+      const selectedText = question.options[selectedIdx];
+      const correctText = question.options[question.correct_index];
+      
+      this.tutorService.getQuizAnswerExplanation(question.question, correctText, selectedText).subscribe(res => {
+        this.activeQuizExplanation.set(res.explicacion);
+        this.showQuizExplanation.set(true);
+      });
+      
       const failedConcept = question.question.includes('¿') 
         ? question.question.split('¿')[1]?.split('?')[0] || question.question 
         : question.question;
@@ -1600,6 +1632,20 @@ export class StudentDashboardComponent {
         this.loadWeaknesses(course.id_curso);
       });
     }
+
+    // Call submit-answer endpoint to check fatigue rules in backend
+    this.tutorService.submitQuizAnswer(
+      user.profile_id,
+      course.id_curso,
+      esCorrecto,
+      timeTaken,
+      sessionDurationMin,
+      clicksRepetitive
+    ).subscribe(res => {
+      if (res && res.congelar) {
+        this.triggerDecompression(res.tiempo_bloqueo_minutos, res.motivo);
+      }
+    });
   }
 
   nextQuestion() {
@@ -1608,6 +1654,9 @@ export class StudentDashboardComponent {
     this.currentQuestionIndex.set(nextIdx);
     this.selectedOptionIndex.set(null);
     this.quizSubmitted.set(false);
+    this.showQuizExplanation.set(false);
+    this.activeQuizExplanation.set('');
+    this.questionStartTimestamp = Date.now();
 
     if (list && nextIdx >= list.length) {
       const finalScore = this.score();
@@ -2012,5 +2061,555 @@ export class StudentDashboardComponent {
     const currentEnrollment = this.tutorService.activeNotebooks().map(c => c.id_curso) || [];
     const updatedEnrollment = currentEnrollment.filter(id => id !== courseId);
     this.tutorService.updateStudentEnrollment(student.id_alumno, updatedEnrollment).subscribe();
+  }
+
+  // ==========================================
+  // 6 CORE MODULES: SIGNALS & HELPER METHODS
+  // ==========================================
+
+  // 1. Copiloto de Trayectos (Modo Manos Libres)
+  copilotCurso = signal<string>('');
+  copilotTiempo = signal<number>(20);
+  copilotModalidad = signal<'resumen' | 'trivia'>('resumen');
+  copilotActive = signal<boolean>(false);
+  copilotScript = signal<any>(null);
+  copilotSectionIndex = signal<number>(0);
+  copilotPlaying = signal<boolean>(false);
+  copilotLoading = signal<boolean>(false);
+  copilotIsRecording = signal<boolean>(false);
+  copilotAnswerTranscript = signal<string>('');
+  copilotFeedbackSpeech = signal<string>('');
+
+  copilotTriviaQuestions = signal<any[]>([]);
+  copilotTriviaIndex = signal<number>(0);
+  copilotTriviaScore = signal<number>(0);
+  copilotListening = signal<boolean>(false);
+  copilotReport = signal<any>(null);
+
+  private recognitionInstance: any = null;
+  private currentUtterance: any = null;
+
+  startCopilot() {
+    const student = this.tutorService.student();
+    if (!student || !this.copilotCurso()) return;
+
+    this.copilotLoading.set(true);
+    this.copilotActive.set(false);
+    this.copilotReport.set(null);
+    this.copilotScript.set(null);
+    this.copilotTriviaQuestions.set([]);
+    this.copilotSectionIndex.set(0);
+    this.copilotTriviaIndex.set(0);
+    this.copilotTriviaScore.set(0);
+    
+    // Stop any speech
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    this.tutorService.generateCopilotScript(
+      student.id_alumno,
+      this.copilotCurso(),
+      this.copilotTiempo(),
+      this.copilotModalidad()
+    ).subscribe({
+      next: (res) => {
+        this.copilotLoading.set(false);
+        this.copilotActive.set(true);
+        this.copilotPlaying.set(true);
+        
+        if (this.copilotModalidad() === 'resumen') {
+          this.copilotScript.set(res);
+          this.speakCurrentSection();
+        } else {
+          this.copilotTriviaQuestions.set(res.preguntas || []);
+          this.speakCurrentQuestion();
+        }
+      },
+      error: () => {
+        alert('Error al generar guión del Copiloto.');
+        this.copilotLoading.set(false);
+      }
+    });
+  }
+
+  stopCopilot() {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    this.copilotPlaying.set(false);
+    this.stopListening();
+  }
+
+  resumeCopilot() {
+    this.copilotPlaying.set(true);
+    if (this.copilotModalidad() === 'resumen') {
+      this.speakCurrentSection();
+    } else {
+      this.speakCurrentQuestion();
+    }
+  }
+
+  skipCopilot15s(direction: 'forward' | 'backward') {
+    if (this.copilotModalidad() === 'resumen') {
+      const script = this.copilotScript();
+      if (!script || !script.secciones) return;
+      let newIdx = this.copilotSectionIndex() + (direction === 'forward' ? 1 : -1);
+      if (newIdx >= 0 && newIdx < script.secciones.length) {
+        this.copilotSectionIndex.set(newIdx);
+        if (this.copilotPlaying()) {
+          this.speakCurrentSection();
+        }
+      }
+    } else {
+      const list = this.copilotTriviaQuestions();
+      let newIdx = this.copilotTriviaIndex() + (direction === 'forward' ? 1 : -1);
+      if (newIdx >= 0 && newIdx < list.length) {
+        this.copilotTriviaIndex.set(newIdx);
+        if (this.copilotPlaying()) {
+          this.speakCurrentQuestion();
+        }
+      }
+    }
+  }
+
+  private speakCurrentSection() {
+    const script = this.copilotScript();
+    if (!script || !script.secciones) return;
+    const section = script.secciones[this.copilotSectionIndex()];
+    if (!section) return;
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const text = `${section.seccion_titulo}. ${section.texto_locucion}`;
+      this.currentUtterance = new SpeechSynthesisUtterance(text);
+      this.currentUtterance.lang = 'es-ES';
+      this.currentUtterance.onend = () => {
+        // Move to next section automatically
+        if (this.copilotPlaying()) {
+          const nextIdx = this.copilotSectionIndex() + 1;
+          if (nextIdx < script.secciones.length) {
+            this.copilotSectionIndex.set(nextIdx);
+            this.speakCurrentSection();
+          } else {
+            this.finishCopilotTrip();
+          }
+        }
+      };
+      window.speechSynthesis.speak(this.currentUtterance);
+    }
+  }
+
+  private speakCurrentQuestion() {
+    const questions = this.copilotTriviaQuestions();
+    if (this.copilotTriviaIndex() >= questions.length) {
+      this.finishCopilotTrip();
+      return;
+    }
+    const q = questions[this.copilotTriviaIndex()];
+    
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const optionsText = q.opciones ? `. Las opciones son: ${q.opciones.join(', ')}` : '';
+      const text = `Pregunta número ${this.copilotTriviaIndex() + 1}. ${q.pregunta} ${optionsText}. Esperamos tu respuesta.`;
+      
+      this.currentUtterance = new SpeechSynthesisUtterance(text);
+      this.currentUtterance.lang = 'es-ES';
+      this.currentUtterance.onend = () => {
+        // Trigger a beep sound then open speech recognition
+        this.playBeepSound();
+        setTimeout(() => this.listenStudentAnswer(), 500);
+      };
+      window.speechSynthesis.speak(this.currentUtterance);
+    }
+  }
+
+  private playBeepSound() {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime); // 800Hz beep
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15); // 150ms beep
+    } catch(e) {}
+  }
+
+  listenStudentAnswer() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Tu navegador no soporta reconocimiento de voz. Por favor usa Google Chrome.');
+      return;
+    }
+
+    this.copilotListening.set(true);
+    this.copilotIsRecording.set(true);
+    this.copilotAnswerTranscript.set('Escuchando...');
+
+    this.recognitionInstance = new SpeechRecognition();
+    this.recognitionInstance.lang = 'es-PE';
+    this.recognitionInstance.continuous = false;
+    this.recognitionInstance.interimResults = false;
+
+    // Timeout fallback of 15 seconds
+    const timeoutId = setTimeout(() => {
+      this.stopListening();
+      this.verifyAnswerText('[Sin respuesta detectada - tiempo agotado]');
+    }, 15000);
+
+    this.recognitionInstance.onresult = (event: any) => {
+      clearTimeout(timeoutId);
+      const transcript = event.results[0][0].transcript;
+      this.copilotAnswerTranscript.set(transcript);
+      this.verifyAnswerText(transcript);
+    };
+
+    this.recognitionInstance.onerror = (err: any) => {
+      console.error(err);
+      clearTimeout(timeoutId);
+      this.stopListening();
+      this.verifyAnswerText('[Error de captura de voz]');
+    };
+
+    this.recognitionInstance.start();
+  }
+
+  private stopListening() {
+    this.copilotListening.set(false);
+    this.copilotIsRecording.set(false);
+    if (this.recognitionInstance) {
+      try {
+        this.recognitionInstance.stop();
+      } catch(e) {}
+      this.recognitionInstance = null;
+    }
+  }
+
+  private verifyAnswerText(studentAns: string) {
+    const student = this.tutorService.student();
+    const q = this.copilotTriviaQuestions()[this.copilotTriviaIndex()];
+    if (!student || !q) return;
+
+    this.tutorService.verifyCopilotAnswer(
+      student.id_alumno,
+      this.copilotCurso(),
+      q.pregunta,
+      studentAns,
+      q.respuesta_correcta,
+      q.concepto_evaluado || 'Trivia'
+    ).subscribe({
+      next: (res) => {
+        this.copilotFeedbackSpeech.set(res.retroalimentacion_hablada);
+        if (res.es_correcto) {
+          this.copilotTriviaScore.update(s => s + 1);
+        }
+        
+        // Speak feedback
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+          const feedbackUtter = new SpeechSynthesisUtterance(res.retroalimentacion_hablada);
+          feedbackUtter.lang = 'es-ES';
+          feedbackUtter.onend = () => {
+            // Next question after feedback ends
+            if (this.copilotPlaying()) {
+              const nextQ = this.copilotTriviaIndex() + 1;
+              this.copilotTriviaIndex.set(nextQ);
+              this.speakCurrentQuestion();
+            }
+          };
+          window.speechSynthesis.speak(feedbackUtter);
+        }
+      },
+      error: () => {
+        // Fallback next question
+        const nextQ = this.copilotTriviaIndex() + 1;
+        this.copilotTriviaIndex.set(nextQ);
+        this.speakCurrentQuestion();
+      }
+    });
+  }
+
+  finishCopilotTrip() {
+    this.stopCopilot();
+    const student = this.tutorService.student();
+    if (!student) return;
+
+    // Calculate final metrics
+    const total = this.copilotModalidad() === 'trivia' ? this.copilotTriviaQuestions().length : 5;
+    const scoreVal = this.copilotModalidad() === 'trivia' ? this.copilotTriviaScore() : 5;
+    const percent = total > 0 ? Math.round((scoreVal / total) * 100) : 100;
+    
+    this.copilotReport.set({
+      tiempo_aprovechado: this.copilotTiempo(),
+      preguntas_contestadas: total,
+      respuestas_correctas: scoreVal,
+      porcentaje_rendimiento: percent
+    });
+
+    // Log event in database
+    this.tutorService.trackEvent(student.id_alumno, "copilot_trip_completed", {
+      id_curso: this.copilotCurso(),
+      tiempo_aprovechado: this.copilotTiempo(),
+      modalidad: this.copilotModalidad(),
+      puntaje: `${scoreVal}/${total}`
+    }).subscribe();
+
+    this.copilotActive.set(false);
+  }
+
+  // 2. Micro-Rutas de Estudio Adaptativas
+  routeExamenFecha = signal<string>('');
+  routeExamenDificultad = signal<number>(3);
+  routeExamenDisponibilidad = signal<number>(2.0);
+  routeActive = signal<boolean>(false);
+  routeTasks = signal<any[]>([]);
+  routeIdExamen = signal<number>(0);
+  routeRecalculateAlert = signal<string>('');
+  routeDiasRestantes = signal<number>(0);
+  routeFormLoading = signal<boolean>(false);
+
+  loadStudyRoute() {
+    const student = this.tutorService.student();
+    const course = this.tutorService.activeCourse();
+    if (!student || !course) return;
+
+    this.tutorService.getStudyRouteDashboard(student.id_alumno, course.id_curso).subscribe(res => {
+      if (res && res.activo) {
+        this.routeActive.set(true);
+        this.routeIdExamen.set(res.id_examen);
+        this.routeTasks.set(res.tareas || []);
+        this.routeDiasRestantes.set(res.dias_restantes);
+        
+        if (res.necesita_recalculo) {
+          this.routeRecalculateAlert.set('Detectamos tareas pendientes de días anteriores. Te sugerimos recalcular tu ruta para balancear la carga de estudio.');
+        } else {
+          this.routeRecalculateAlert.set('');
+        }
+      } else {
+        this.routeActive.set(false);
+        this.routeTasks.set([]);
+      }
+    });
+  }
+
+  generateStudyRoute() {
+    const student = this.tutorService.student();
+    const course = this.tutorService.activeCourse();
+    if (!student || !course || !this.routeExamenFecha()) return;
+
+    this.routeFormLoading.set(true);
+    this.tutorService.generateStudyRoute(
+      student.id_alumno,
+      course.id_curso,
+      this.routeExamenFecha(),
+      this.routeExamenDificultad(),
+      this.routeExamenDisponibilidad()
+    ).subscribe({
+      next: () => {
+        this.routeFormLoading.set(false);
+        this.loadStudyRoute();
+      },
+      error: () => {
+        this.routeFormLoading.set(false);
+        alert('Error al generar tu ruta de estudio.');
+      }
+    });
+  }
+
+  toggleRouteTask(t: any) {
+    this.tutorService.toggleStudyRouteTask(t.id_tarea).subscribe({
+      next: (res) => {
+        t.completado = res.completado;
+        // Reload dashboard to check if recalculation alert clears
+        this.loadStudyRoute();
+      }
+    });
+  }
+
+  recalculateStudyRoute() {
+    const examId = this.routeIdExamen();
+    if (!examId) return;
+
+    this.tutorService.recalculateStudyRoute(examId).subscribe({
+      next: (res) => {
+        this.routeRecalculateAlert.set(res.notificacion);
+        this.loadStudyRoute();
+      }
+    });
+  }
+
+  // 3. Simulador de Exámenes Anti-Ansiedad
+  hideQuizTimer = signal<boolean>(false);
+  activeQuizExplanation = signal<string>('');
+  showQuizExplanation = signal<boolean>(false);
+  quizCongelar = signal<boolean>(false);
+  quizBloqueoMinutos = signal<number>(5);
+  quizBloqueoMotivo = signal<string>('');
+  quizBloqueoSegundosRestantes = signal<number>(300);
+  quizSessionStartTime = 0;
+  questionStartTimestamp = 0;
+  private quizClickTimestamps: number[] = [];
+  private quizDecompressionInterval: any = null;
+
+  toggleTimerVisibility() {
+    this.hideQuizTimer.set(!this.hideQuizTimer());
+  }
+
+  logEvaluatorClick() {
+    this.quizClickTimestamps.push(Date.now());
+  }
+
+  triggerDecompression(minutes: number, motivo: string) {
+    this.quizCongelar.set(true);
+    this.quizBloqueoMinutos.set(minutes);
+    this.quizBloqueoMotivo.set(motivo);
+    this.quizBloqueoSegundosRestantes.set(minutes * 60);
+
+    // Stop current speech or timer in dashboard
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    
+    if (this.quizDecompressionInterval) {
+      clearInterval(this.quizDecompressionInterval);
+    }
+
+    this.quizDecompressionInterval = setInterval(() => {
+      const remaining = this.quizBloqueoSegundosRestantes() - 1;
+      this.quizBloqueoSegundosRestantes.set(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(this.quizDecompressionInterval);
+        this.quizCongelar.set(false);
+        // Reset quiz state to allow retry
+        this.startQuiz();
+      }
+    }, 1000);
+  }
+
+  // 4. Banco de Preguntas Comunitario
+  crowdFacultad = signal<string>('');
+  crowdCurso = signal<string>('');
+  crowdProfesor = signal<string>('');
+  crowdPreguntaTexto = signal<string>('');
+  crowdRespuestaDeclarada = signal<string>('');
+  crowdImagenFile = signal<File | null>(null);
+  crowdImagenFileName = signal<string>('');
+  crowdUploadSuccess = signal<string>('');
+  crowdUploadError = signal<string>('');
+  crowdLoading = signal<boolean>(false);
+  crowdPublishedQuestions = signal<any[]>([]);
+
+  onCrowdFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.crowdImagenFile.set(file);
+      this.crowdImagenFileName.set(file.name);
+    }
+  }
+
+  submitCrowdQuestion() {
+    const student = this.tutorService.student();
+    if (!student) return;
+
+    this.crowdUploadSuccess.set('');
+    this.crowdUploadError.set('');
+    this.crowdLoading.set(true);
+
+    const formData = new FormData();
+    formData.append('id_alumno', student.id_alumno);
+    formData.append('id_curso', this.crowdCurso());
+    formData.append('facultad', this.crowdFacultad());
+    formData.append('profesor', this.crowdProfesor());
+    formData.append('pregunta_texto', this.crowdPreguntaTexto());
+    formData.append('respuesta_correcta_declarada', this.crowdRespuestaDeclarada());
+    
+    if (this.crowdImagenFile()) {
+      formData.append('imagen_soporte', this.crowdImagenFile()!);
+    }
+
+    this.tutorService.uploadCrowdsourcedQuestion(formData).subscribe({
+      next: (res) => {
+        this.crowdLoading.set(false);
+        this.crowdUploadSuccess.set(`Pregunta enviada. La IA le otorgó un score de confianza de ${res.score_confianza}%. Estado: ${res.estado}`);
+        
+        // Reset form
+        this.crowdPreguntaTexto.set('');
+        this.crowdRespuestaDeclarada.set('');
+        this.crowdProfesor.set('');
+        this.crowdImagenFile.set(null);
+        this.crowdImagenFileName.set('');
+        
+        // Reload list
+        this.loadCrowdQuestions();
+      },
+      error: (err) => {
+        this.crowdLoading.set(false);
+        this.crowdUploadError.set(err.error?.error || 'Error al subir la pregunta.');
+      }
+    });
+  }
+
+  loadCrowdQuestions() {
+    const course = this.tutorService.activeCourse();
+    if (!course) return;
+
+    this.tutorService.getPublishedQuestions(course.id_curso).subscribe(res => {
+      this.crowdPublishedQuestions.set(res || []);
+    });
+  }
+
+  // 5. Células de Estudio
+  cellsInvitations = signal<any[]>([]);
+  cellsActive = signal<any[]>([]);
+  cellsSuccess = signal<string>('');
+  cellsError = signal<string>('');
+  cellsTriggerSuccess = signal<string>('');
+
+  loadCellsDashboard() {
+    const student = this.tutorService.student();
+    if (!student) return;
+
+    this.tutorService.getStudyCellInvitations(student.id_alumno).subscribe(res => {
+      this.cellsInvitations.set(res || []);
+    });
+
+    this.tutorService.getActiveStudyCells(student.id_alumno).subscribe(res => {
+      this.cellsActive.set(res || []);
+    });
+  }
+
+  acceptCell(idRegistro: number) {
+    this.cellsSuccess.set('');
+    this.cellsError.set('');
+    this.tutorService.acceptCellInvitation(idRegistro).subscribe({
+      next: () => {
+        this.cellsSuccess.set('¡Invitación aceptada! La célula ya está activa.');
+        this.loadCellsDashboard();
+      },
+      error: (err) => {
+        this.cellsError.set('Error al aceptar invitación.');
+      }
+    });
+  }
+
+  rejectCell(idRegistro: number) {
+    this.tutorService.rejectCellInvitation(idRegistro).subscribe({
+      next: () => {
+        this.loadCellsDashboard();
+      }
+    });
+  }
+
+  triggerCellMatchmaking() {
+    this.cellsTriggerSuccess.set('');
+    this.tutorService.triggerMatchmaking().subscribe(res => {
+      this.cellsTriggerSuccess.set(res.message);
+      setTimeout(() => this.cellsTriggerSuccess.set(''), 4000);
+      this.loadCellsDashboard();
+    });
   }
 }

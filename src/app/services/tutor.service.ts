@@ -428,4 +428,116 @@ export class TutorService {
       metadata: metadata
     });
   }
+
+  // --- NEW FEATURES FOR 6 CORE MODULES ---
+  // 1. Copiloto de Trayectos
+  generateCopilotScript(idAlumno: string, idCurso: string, tiempo: number, modalidad: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/copilot/generate-script`, {
+      id_alumno: idAlumno,
+      id_curso: idCurso,
+      tiempo_trayecto: tiempo,
+      modalidad
+    });
+  }
+
+  verifyCopilotAnswer(idAlumno: string, idCurso: string, pregunta: string, alumnoAns: string, correctAns: string, concepto: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/copilot/verify-answer`, {
+      id_alumno: idAlumno,
+      id_curso: idCurso,
+      pregunta_texto: pregunta,
+      respuesta_alumno: alumnoAns,
+      respuesta_correcta: correctAns,
+      concepto_evaluado: concepto
+    });
+  }
+
+  // 2. Micro-Rutas Adaptativas
+  generateStudyRoute(idAlumno: string, idCurso: string, fechaLimite: string, dificultad: number, disponibilidad: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/study-routes/plan`, {
+      id_alumno: idAlumno,
+      id_curso: idCurso,
+      fecha_limite: fechaLimite,
+      nivel_dificultad: dificultad,
+      disponibilidad_horas: disponibilidad
+    });
+  }
+
+  getStudyRouteDashboard(idAlumno: string, idCurso: string): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}/study-routes/dashboard/${idAlumno}/${idCurso}`);
+  }
+
+  toggleStudyRouteTask(idTarea: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/study-routes/tasks/${idTarea}/toggle`, {});
+  }
+
+  recalculateStudyRoute(idExamen: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/study-routes/recalculate`, { id_examen: idExamen });
+  }
+
+  // 3. Evaluador submit & explain
+  submitQuizAnswer(idAlumno: string, idCurso: string, esCorrecto: boolean, tiempoRespuesta: number, sesionDuracionMinutos: number, clicksRepetitivos: boolean): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/evaluator/submit-answer`, {
+      id_alumno: idAlumno,
+      id_curso: idCurso,
+      es_correcto: esCorrecto,
+      tiempo_respuesta_segundos: tiempoRespuesta,
+      sesion_duracion_minutos: sesionDuracionMinutos,
+      clicks_repetitivos: clicksRepetitivos
+    });
+  }
+
+  getQuizAnswerExplanation(pregunta: string, correcta: string, alumno: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/evaluator/explain`, {
+      pregunta_texto: pregunta,
+      respuesta_correcta: correcta,
+      respuesta_alumno: alumno
+    });
+  }
+
+  // 4. Banco de Preguntas Comunitario
+  uploadCrowdsourcedQuestion(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/crowdsourcing/upload`, formData);
+  }
+
+  getPublishedQuestions(idCurso: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/crowdsourcing/questions/${idCurso}`);
+  }
+
+  getPendingQuestions(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/crowdsourcing/questions/pending`);
+  }
+
+  moderateQuestion(idPregunta: number, action: string): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/crowdsourcing/questions/${idPregunta}/moderate`, { action });
+  }
+
+  // 5. Células de Estudio
+  triggerMatchmaking(): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/cells/matchmaking/trigger`, {});
+  }
+
+  getStudyCellInvitations(idAlumno: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/cells/invitations/${idAlumno}`);
+  }
+
+  acceptCellInvitation(idRegistro: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/cells/invitations/${idRegistro}/accept`, {});
+  }
+
+  rejectCellInvitation(idRegistro: number): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/cells/invitations/${idRegistro}/reject`, {});
+  }
+
+  getActiveStudyCells(idAlumno: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/cells/active/${idAlumno}`);
+  }
+
+  // 6. Consola de Sentimiento Docente
+  getDocenteSentimentDashboard(idDocente: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}/docente/dashboard/${idDocente}`);
+  }
+
+  shareReinforcementResource(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/docente/share-resource`, formData);
+  }
 }
