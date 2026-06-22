@@ -292,6 +292,20 @@ export class AdminDashboardComponent {
   adminElectiveCourses = computed(() => this.adminMallaCourses().filter(c => c.es_electivo));
   selectedAdminCourse = signal<any>(null);
 
+  cycles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  getCoursesByCiclo(ciclo: number): any[] {
+    return this.adminMallaCourses().filter(c => c.ciclo_teorico === ciclo);
+  }
+
+  getRomanNum(num: number): string {
+    const romanMap: { [key: number]: string } = {
+      1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V',
+      6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X'
+    };
+    return romanMap[num] || num.toString();
+  }
+
   // Manual course creation signals
   newCourseId = signal<string>('');
   newCourseNombre = signal<string>('');
