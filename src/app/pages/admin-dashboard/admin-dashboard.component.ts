@@ -220,6 +220,7 @@ export class AdminDashboardComponent {
   editUsername = signal<string>('');
   editEmail = signal<string>('');
   editRol = signal<string>('');
+  editCiclo = signal<number>(1);
   editPassword = signal<string>('');
   showEditUserPassword = signal<boolean>(false);
   editUserSuccess = signal<string>('');
@@ -583,6 +584,7 @@ export class AdminDashboardComponent {
     this.editUsername.set(user.username);
     this.editEmail.set(user.email);
     this.editRol.set(user.rol);
+    this.editCiclo.set(user.ciclo || 1);
     this.editPassword.set('');
     this.editUserSuccess.set('');
     this.editUserError.set('');
@@ -601,6 +603,9 @@ export class AdminDashboardComponent {
       email: this.editEmail(),
       rol: this.editRol()
     };
+    if (this.editRol() === 'Estudiante') {
+      payload.ciclo = this.editCiclo();
+    }
     if (this.editPassword()) {
       payload.password = this.editPassword();
     }

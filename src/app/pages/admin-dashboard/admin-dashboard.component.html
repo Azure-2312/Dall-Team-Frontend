@@ -758,6 +758,22 @@
                 </select>
               </div>
 
+              <div *ngIf="editRol() === 'Estudiante'">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Ciclo Académico del Estudiante:</label>
+                <select [ngModel]="editCiclo()" (ngModelChange)="editCiclo.set($event)" name="editCiclo" style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.85rem;" required>
+                  <option [value]="1">1° Ciclo</option>
+                  <option [value]="2">2° Ciclo</option>
+                  <option [value]="3">3° Ciclo</option>
+                  <option [value]="4">4° Ciclo</option>
+                  <option [value]="5">5° Ciclo (Estudios Específicos)</option>
+                  <option [value]="6">6° Ciclo (Estudios Específicos)</option>
+                  <option [value]="7">7° Ciclo (Estudios Específicos)</option>
+                  <option [value]="8">8° Ciclo (Estudios Específicos)</option>
+                  <option [value]="9">9° Ciclo (Estudios Especializados)</option>
+                  <option [value]="10">10° Ciclo (Estudios Especializados)</option>
+                </select>
+              </div>
+
               <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Nueva Contraseña (dejar en blanco para no cambiar):</label>
                 <div style="position: relative; display: flex; align-items: center;">

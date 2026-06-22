@@ -1959,6 +1959,7 @@ export class StudentDashboardComponent {
           this.studentSyllabusLoading.set(false);
           this.showSyllabusUploadForm.set(false);
           this.loadBanner(course.id_curso);
+          this.selectCourse(course);
         },
         error: (err) => {
           this.studentSyllabusError.set(err.error?.error || 'Error al cargar el sílabo.');
@@ -1979,6 +1980,7 @@ export class StudentDashboardComponent {
           this.studentSyllabusLoading.set(false);
           this.showSyllabusUploadForm.set(false);
           this.loadBanner(course.id_curso);
+          this.selectCourse(course);
         },
         error: (err) => {
           this.studentSyllabusError.set(err.error?.error || 'Error al cargar el archivo PDF del sílabo.');

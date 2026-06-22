@@ -227,9 +227,16 @@
 
                   <!-- SECTION: SÍLABO -->
                   <div [style.flex]="isSyllabusCollapsed() ? 'none' : '7'" style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden;">
-                    <div (click)="isSyllabusCollapsed.set(!isSyllabusCollapsed())" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; cursor: pointer; user-select: none; margin-top: 8px;">
-                      <h3 style="font-size: 0.8rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); text-transform: uppercase;">🎓 Sílabo</h3>
-                      <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ isSyllabusCollapsed() ? '▼' : '▲' }}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-default); padding-bottom: 6px; margin-top: 8px;">
+                      <div (click)="isSyllabusCollapsed.set(!isSyllabusCollapsed())" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; flex: 1;">
+                        <h3 style="font-size: 0.8rem; font-weight: 800; margin: 0; color: var(--unfv-blue-primary); text-transform: uppercase;">🎓 Sílabo</h3>
+                        <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ isSyllabusCollapsed() ? '▼' : '▲' }}</span>
+                      </div>
+                      <button (click)="$event.stopPropagation(); showSyllabusUploadForm.set(!showSyllabusUploadForm()); studentSyllabusSuccess.set(''); studentSyllabusError.set('');" 
+                              style="background: rgba(0, 45, 98, 0.05); border: 1px solid rgba(0, 45, 98, 0.1); font-size: 0.62rem; font-weight: 800; color: var(--unfv-blue-primary); cursor: pointer; padding: 3px 8px; border-radius: 6px; display: flex; align-items: center; gap: 2px;"
+                              title="Subir o actualizar el sílabo con IA">
+                        📂 Subir
+                      </button>
                     </div>
                     
                     <div *ngIf="!isSyllabusCollapsed()" style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow-y: auto; padding-right: 2px;">
@@ -1335,6 +1342,64 @@
         </div>
         
       </div>
+    </div>
+  </div>
+
+  <!-- STUDENT SYLLABUS UPLOAD MODAL -->
+  <div *ngIf="showSyllabusUploadForm() && tutorService.activeCourse() as active" style="position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px; font-family: var(--font-body);">
+    <div style="width: 100%; max-width: 500px; display: flex; flex-direction: column; background: #ffffff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-glass);">
+      <!-- Modal Header -->
+      <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+        <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--unfv-blue-primary);">🎓 Subir Sílabo para {{ active.nombre }}</h3>
+        <button (click)="showSyllabusUploadForm.set(false)" style="background: rgba(0,0,0,0.06); border: none; font-size: 1.2rem; color: var(--text-secondary); cursor: pointer; padding: 6px 10px; line-height: 1; border-radius: 8px;">×</button>
+      </div>
+      
+      <!-- Modal Body -->
+      <form (submit)="$event.preventDefault(); ingestStudentSyllabus()" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; gap: 10px; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
+          <button type="button" (click)="studentSyllabusInputMode.set('pdf')" [style.background]="studentSyllabusInputMode() === 'pdf' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'pdf' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">📄 Subir PDF</button>
+          <button type="button" (click)="studentSyllabusInputMode.set('text')" [style.background]="studentSyllabusInputMode() === 'text' ? 'rgba(0, 45, 98, 0.08)' : 'transparent'" [style.color]="studentSyllabusInputMode() === 'text' ? 'var(--unfv-blue-primary)' : 'var(--text-secondary)'" style="flex: 1; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">✍️ Pegar Texto</button>
+        </div>
+
+        <!-- PDF Mode -->
+        <div *ngIf="studentSyllabusInputMode() === 'pdf'">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Seleccionar archivo PDF del sílabo:</label>
+          <div style="border: 2px dashed var(--border-glass); padding: 20px; border-radius: 12px; text-align: center; background: rgba(0,0,0,0.015); position: relative;">
+            <input type="file" (change)="onStudentSyllabusPDFChange($event)" accept="application/pdf" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+            <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">📂</span>
+            <span style="font-size: 0.76rem; color: var(--text-secondary); font-weight: 600; display: block;">
+              {{ studentSyllabusPDFFileName() || 'Arrastra o haz clic para subir tu PDF' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Text Mode -->
+        <div *ngIf="studentSyllabusInputMode() === 'text'">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Pegar contenido de texto del sílabo:</label>
+          <textarea [ngModel]="studentSyllabusText()" (ngModelChange)="studentSyllabusText.set($event)" name="studentSyllabusText" rows="6" placeholder="Pega los contenidos semanales o el texto completo del sílabo aquí..." style="width: 100%; background: #ffffff; border: 1px solid var(--border-glass); color: #0f172a; padding: 10px 14px; border-radius: 8px; outline: none; font-size: 0.82rem; font-family: var(--font-body); resize: vertical;" required></textarea>
+        </div>
+
+        <!-- Feedback Messages -->
+        <div *ngIf="studentSyllabusLoading()" style="text-align: center; padding: 10px; color: var(--unfv-blue-primary); font-size: 0.8rem; font-weight: 700;">
+          ⏳ La IA está leyendo y procesando tu sílabo (semana a semana)...
+        </div>
+        <div *ngIf="studentSyllabusSuccess()" style="padding: 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; color: #059669; font-size: 0.8rem; text-align: center;">
+          ✓ {{ studentSyllabusSuccess() }}
+        </div>
+        <div *ngIf="studentSyllabusError()" style="padding: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #dc2626; font-size: 0.8rem; text-align: center;">
+          ✗ {{ studentSyllabusError() }}
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+          <button type="button" (click)="showSyllabusUploadForm.set(false)" [disabled]="studentSyllabusLoading()" class="btn-secondary" style="font-size: 0.8rem; padding: 8px 16px;">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="studentSyllabusLoading() || (studentSyllabusInputMode() === 'text' ? !studentSyllabusText() : !studentSyllabusPDFFile())" class="btn-primary" style="font-size: 0.8rem; padding: 8px 16px;">
+            🤖 Procesar con IA
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
